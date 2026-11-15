@@ -40,6 +40,10 @@ data class BookRecord(
     val fileName: String? = null,
     /** File name inside the app's private covers directory, if the book has a cover. */
     val coverFileName: String? = null,
+    /** See [Book.sourceName]. Defaulted: older stores have no such key. */
+    val sourceName: String? = null,
+    /** See [Book.sourceFolder]. Defaulted for the same reason. */
+    val sourceFolder: String? = null,
     val addedAtMillis: Long,
     /** See [Book.contentHash]. Defaulted: a library.json written before this
      *  existed has no such key, and requiring one would reject every legacy
@@ -182,6 +186,8 @@ fun BookRecord.withUserData(
     format = format,
     fileName = fileName,
     coverFileName = coverFileName,
+    sourceName = sourceName,
+    sourceFolder = sourceFolder,
     addedAtMillis = addedAtMillis,
     contentHash = contentHash,
     sizeBytes = sizeBytes,
@@ -220,6 +226,8 @@ fun Book.toRecord(): BookRecord = BookRecord(
     format = format,
     fileName = fileName,
     coverFileName = coverFileName,
+    sourceName = sourceName,
+    sourceFolder = sourceFolder,
     addedAtMillis = addedAtMillis,
     contentHash = contentHash,
     sizeBytes = sizeBytes,

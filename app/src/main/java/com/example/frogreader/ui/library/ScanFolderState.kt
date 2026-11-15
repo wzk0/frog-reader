@@ -11,6 +11,7 @@ import com.example.frogreader.data.BookRepository
 import com.example.frogreader.data.DuplicateMatch
 import com.example.frogreader.data.FolderScanner
 import com.example.frogreader.data.ImportMode
+import com.example.frogreader.data.model.Book
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
@@ -21,6 +22,38 @@ import java.io.File
 
 /** How far a batch has got, for the bar above the button. */
 data class ScanImportProgress(val done: Int, val total: Int)
+
+/**
+ * Where a scanned folder's books should be filed, from the two switches the
+ * screen offers.
+ *
+ * Only one of them can apply: a folder with subfolders is question A, a folder
+ * without is question B. Resolving that here, once per batch, keeps the two
+ * switches from being able to contradict each other halfway through a scan.
+ */
+internal data class ScanShelfPlan(
+    /** One shelf per subfolder, named after it. */
+    val perSubfolder: Boolean,
+    /** One shelf for everything, named after the picked folder. */
+    val wholeFolder: String?,
+) {
+    /** The shelf a file from [folder] belongs on, or null to leave it loose. */
+    fun shelfFor(folder: String): String? = when {
+        perSubfolder && folder.isNotEmpty() -> folder
+        else -> wholeFolder
+    }
+}
+
+internal fun scanShelfPlan(
+    subfolders: List<String>,
+    subfolderShelves: Boolean,
+    folderShelf: Boolean,
+    folderName: String,
+): ScanShelfPlan = ScanShelfPlan(
+    perSubfolder = subfolderShelves && subfolders.isNotEmpty(),
+    wholeFolder = folderName.trim()
+        .takeIf { folderShelf && subfolders.isEmpty() && it.isNotEmpty() },
+)
 
 /**
  * Everything the scan screen knows, and everything it does.
@@ -58,6 +91,33 @@ class ScanFolderState(
 
     var importing by mutableStateOf<ScanImportProgress?>(null)
         private set
+
+    /**
+     * Whether a finished batch should also build one shelf per subfolder.
+     *
+     * On by default: the folders are already the user's own classification, and
+     * a library scanned from `Books/` with `Novels/` and `Poems/` inside it is
+     * asking to be filed that way. The row that shows this switch only appears
+     * when the scan actually found a subfolder, so a flat folder never sees it.
+     */
+    var subfolderShelves by mutableStateOf(true)
+
+    /**
+     * Whether a folder with no subfolders becomes one shelf of its own.
+     *
+     * The same offer, for the flat case: a picked folder called `科幻` holding
+     * twelve files is a shelf called 科幻, whether or not it has any folders
+     * inside it. Only one of the two can apply at a time — the scan knows which
+     * by the time it starts adding.
+     */
+    var folderShelf by mutableStateOf(true)
+
+    /** Non-blank subfolders found so far, in natural order, for the switch row. */
+    val subfolders: List<String>
+        get() = rows.map { it.folder }
+            .filter { it.isNotEmpty() }
+            .distinct()
+            .sortedWith(NaturalOrder)
 
     /** Questions raised by the batch. Its own, so it cannot collide with the library's. */
     val conflicts = ConflictPrompt()
@@ -97,6 +157,7 @@ class ScanFolderState(
                         format = candidate.format,
                         sizeBytes = candidate.sizeBytes,
                         lastModifiedMillis = candidate.lastModifiedMillis,
+                        folder = candidate.folder,
                         // Something readable in the row from the first frame.
                         // The real title replaces it a moment later.
                         title = candidate.name.substringBeforeLast('.'),
@@ -203,10 +264,23 @@ class ScanFolderState(
      * Sequential on purpose: every commit serializes on the repository's index
      * lock anyway, and a conflict can only be put to the user one at a time.
      */
-    fun addSelected(onFinished: (added: Int, failed: Int) -> Unit) {
+    fun addSelected(folderName: String, onFinished: (added: Int, failed: Int) -> Unit) {
         if (importing != null) return
         val targets = rows.filter { it.selected }
         if (targets.isEmpty()) return
+
+        // Shelves → the books that go on them, in the order they were added.
+        // Built during the batch because a shelf can only be made from the ids
+        // the repository handed back.
+        val shelved = LinkedHashMap<String, MutableList<String>>()
+        // Resolved once, before the first book: one shelf per subfolder, or the
+        // whole folder as one shelf. The two cannot both apply.
+        val plan = scanShelfPlan(
+            subfolders = subfolders,
+            subfolderShelves = subfolderShelves,
+            folderShelf = folderShelf,
+            folderName = folderName,
+        )
 
         scope.launch {
             var added = 0
@@ -222,8 +296,13 @@ class ScanFolderState(
                             failed++
                             update(row.id) { it.copy(state = ScanRowState.FAILED, selected = false) }
                         }
-                        outcome.getOrThrow() -> {
+                        else -> outcome.getOrThrow()?.let { book ->
                             added++
+                            // Only books the user actually added, and only when
+                            // they left the shelf switch on.
+                            plan.shelfFor(row.folder)?.let { shelf ->
+                                shelved.getOrPut(shelf) { mutableListOf() } += book.id
+                            }
                             update(row.id) {
                                 it.copy(
                                     state = ScanRowState.IN_LIBRARY,
@@ -231,10 +310,12 @@ class ScanFolderState(
                                     selected = false,
                                 )
                             }
-                        }
-                        else -> update(row.id) { it.copy(selected = false) }
+                        } ?: update(row.id) { it.copy(selected = false) }
                     }
                 }
+                // One shelf per folder, reusing one the user already has under
+                // that name rather than making a second with the same label.
+                shelved.forEach { (folder, ids) -> runCatching { shelve(folder, ids) } }
             } finally {
                 importing = null
                 conflicts.reset()
@@ -245,8 +326,18 @@ class ScanFolderState(
         }
     }
 
-    /** True when the book was actually added or replaced. */
-    private suspend fun addOne(row: ScanRow, remaining: Int): Boolean {
+    /** Files the books under a shelf named after their folder, making it if needed. */
+    private suspend fun shelve(folder: String, bookIds: List<String>) {
+        val existing = repository.shelves.value.firstOrNull { it.name == folder }
+        if (existing == null) {
+            repository.createShelf(bookIds, name = folder)
+        } else {
+            repository.addToShelf(existing.id, bookIds)
+        }
+    }
+
+    /** The book that was added or replaced, or null when the user backed out. */
+    private suspend fun addOne(row: ScanRow, remaining: Int): Book? {
         val staged = repository.stageImport(row.uri)
         var committed = false
         try {
@@ -259,11 +350,11 @@ class ScanFolderState(
                     ConflictChoice.CLONE -> ImportMode.Clone
                     ConflictChoice.REPLACE -> ImportMode.Replace(duplicate.book.id)
                 }
-            } ?: return false
+            } ?: return null
 
-            repository.commitImport(staged, mode)
+            val book = repository.commitImport(staged, mode)
             committed = true
-            return true
+            return book
         } finally {
             // Backing out of the screen mid-batch must not leave a book-sized
             // file in staging for the sweep to find half an hour later.

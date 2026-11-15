@@ -23,12 +23,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
-import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.LocalOffer
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -81,37 +81,43 @@ private data class AboutLink(
     val materialIcon: ImageVector? = null,
 )
 
+/**
+ * The fork's own channels.
+ *
+ * Support points at this repository and not upstream: KNITIPKA cannot answer
+ * for the Chinese translation, the folder shelves or the downloadable fonts,
+ * and a report filed there about them would only be sent back here.
+ */
 private val supportLinks = listOf(
     AboutLink(
-        R.string.settings_about_telegram, R.string.settings_about_support_subtitle,
-        "https://t.me/knitipka", drawable = R.drawable.ic_about_telegram,
+        R.string.settings_about_issues, R.string.settings_about_issues_subtitle,
+        FORK_REPO + "/issues", materialIcon = Icons.Outlined.BugReport,
     ),
     AboutLink(
-        R.string.settings_about_signal, R.string.settings_about_support_subtitle,
-        "https://signal.me/#eu/gXfCfTAgdX8qNuAaZ-L3ozxFAJ0qb1ObkD9t2TNTVr6iPYYMhVVOSrXw-5pjdEjb",
-        drawable = R.drawable.ic_about_signal,
-    ),
-    AboutLink(
-        R.string.settings_about_email, R.string.settings_about_email_subtitle,
-        "mailto:knitipka@proton.me", materialIcon = Icons.Outlined.Email,
+        R.string.settings_about_guide, R.string.settings_about_guide_subtitle,
+        FORK_REPO + "#readme", materialIcon = Icons.AutoMirrored.Outlined.MenuBook,
     ),
 )
 
 private val projectLinks = listOf(
     AboutLink(
         R.string.settings_about_github, R.string.settings_about_github_subtitle,
-        "https://github.com/KNITIPKA/frog-reader", drawable = R.drawable.ic_about_github,
+        FORK_REPO, drawable = R.drawable.ic_about_github,
     ),
     AboutLink(
         R.string.settings_about_releases, R.string.settings_about_releases_subtitle,
-        "https://github.com/KNITIPKA/frog-reader/releases", materialIcon = Icons.Rounded.LocalOffer,
+        FORK_REPO + "/releases", materialIcon = Icons.Rounded.LocalOffer,
     ),
 )
 
+/** Credited, not offered as support: the original English project. */
 private val channelLink = AboutLink(
     R.string.settings_about_channel, R.string.settings_about_channel_subtitle,
-    "https://t.me/frogreader", materialIcon = Icons.Rounded.Groups,
+    "https://github.com/KNITIPKA/frog-reader", drawable = R.drawable.ic_about_github,
 )
+
+/** This fork, the only place its APKs and issues live. */
+private const val FORK_REPO = "https://github.com/wzk0/frog-reader"
 
 @Composable
 internal fun AboutDialog(onDismiss: () -> Unit, onOpenFailed: (String) -> Unit) {

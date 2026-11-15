@@ -45,8 +45,8 @@ internal data class SharedBookFile(val file: File, val mimeType: String, val tit
 /** Shares a separate snapshot, so later edits/removal cannot change an attachment being sent. */
 internal object BookSharing {
     suspend fun prepare(repository: BookRepository, cacheDir: File, bookId: String): SharedBookFile = withContext(Dispatchers.IO) {
-        val book = repository.bookById(bookId) ?: throw IOException("Book no longer exists.")
-        val source = repository.bookFileFor(book) ?: throw IOException("Book file is missing.")
+        val book = repository.bookById(bookId) ?: throw IOException("这本书已不存在。")
+        val source = repository.bookFileFor(book) ?: throw IOException("书籍文件已丢失.")
         val nativeLabel = runCatching { repository.metadataFileInfo(book).label }.getOrNull()
         val format = bookTransferFormat(book.format, nativeLabel)
         val root = File(cacheDir, "shared-books").apply { mkdirs() }
@@ -54,7 +54,7 @@ internal object BookSharing {
         val cutoff = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000
         root.listFiles()?.filter { it.isDirectory && it.lastModified() < cutoff }?.forEach { it.deleteRecursively() }
         val directory = File(root, UUID.randomUUID().toString())
-        if (!directory.mkdirs()) throw IOException("Could not prepare a book copy.")
+        if (!directory.mkdirs()) throw IOException("无法准备书籍副本。")
         try {
             val file = File(directory, bookTransferName(book.title, format))
             source.inputStream().use { input -> file.outputStream().use { input.copyTo(it) } }

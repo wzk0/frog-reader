@@ -137,6 +137,25 @@ data class Book(
     val fileName: String? = null,
     /** File name inside the app's private covers directory, if the book has a cover. */
     val coverFileName: String? = null,
+    /**
+     * The file name the book was imported under, e.g. `01 Dune.epub`.
+     *
+     * [fileName] is `<uuid>.<ext>` inside the app's private books directory, so
+     * it says nothing about how the user's own library is named. This keeps the
+     * original name, which is what their folder is sorted by. Null on records
+     * written before this existed and on books restored from a backup made then;
+     * the library falls back to comparing titles.
+     */
+    val sourceName: String? = null,
+    /**
+     * The folder the imported file came from, as the storage provider reported
+     * it relative to its root — `Books/Novels`, empty or null for a root file
+     * and for anything imported before this was recorded.
+     *
+     * Only a grouping hint for the library. Never used to find the file again:
+     * what the app keeps is its own copy under [fileName].
+     */
+    val sourceFolder: String? = null,
     val addedAtMillis: Long,
     /**
      * SHA-256 of the STORED file, lowercase hex — what tells one book file from
@@ -198,6 +217,15 @@ data class Book(
     val hasFinishedReading: Boolean get() = status == ReadingStatus.FINISHED || finishedAtMillis != null
 
     val effectiveRatingHalfStars: Int? get() = ratingHalfStars ?: rating?.times(2)
+
+    /**
+     * What the library sorts and groups by when the user asks for file-name
+     * order: the name in their own folder, else the title.
+     */
+    val sortName: String get() = sourceName?.trim()?.takeIf { it.isNotEmpty() } ?: title
+
+    /** Folder this book is filed under for grouping; blank means "unsorted". */
+    val sortFolder: String get() = sourceFolder?.trim().orEmpty()
 }
 
 /**

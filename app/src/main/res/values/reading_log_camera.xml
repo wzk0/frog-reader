@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="reading_log_camera_title">Photograph cover</string>
-    <string name="reading_log_camera_hint">Fit your cover inside the frame. This is how it will appear in Reading Log.</string>
-    <string name="reading_log_camera_capture">Take photo</string>
-    <string name="reading_log_camera_gallery">Choose a photo</string>
-    <string name="reading_log_camera_permission">Allow camera access to photograph your book cover.</string>
-    <string name="reading_log_camera_allow">Allow camera</string>
-    <string name="reading_log_camera_settings">Open app settings</string>
-    <string name="reading_log_camera_error">The camera is unavailable. Try again or choose a photo.</string>
-    <string name="reading_log_camera_retry">Try again</string>
-    <string name="reading_log_camera_frame">Book cover frame, 2 to 3 aspect ratio</string>
-    <string name="reading_log_camera_flash">Toggle flash</string>
+    <string name="reading_log_camera_title">拍摄封面</string>
+    <string name="reading_log_camera_hint">把封面放进取景框。它在阅读记录中就是这个样子。</string>
+    <string name="reading_log_camera_capture">拍照</string>
+    <string name="reading_log_camera_gallery">选择照片</string>
+    <string name="reading_log_camera_permission">允许使用相机来拍摄书籍封面。</string>
+    <string name="reading_log_camera_allow">允许使用相机</string>
+    <string name="reading_log_camera_settings">打开应用设置</string>
+    <string name="reading_log_camera_error">相机不可用。请重试或选择照片。</string>
+    <string name="reading_log_camera_retry">重试</string>
+    <string name="reading_log_camera_frame">书籍封面取景框，2:3 比例</string>
+    <string name="reading_log_camera_flash">切换闪光灯</string>
 </resources>

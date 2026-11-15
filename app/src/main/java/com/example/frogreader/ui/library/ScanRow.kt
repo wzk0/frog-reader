@@ -36,6 +36,11 @@ data class ScanRow(
     val lastModifiedMillis: Long,
     /** The file name until the file has been parsed, then the book's title. */
     val title: String,
+    /**
+     * Folder this file was found in, relative to the picked root; empty for the
+     * root itself. Drives the optional "one shelf per subfolder" after import.
+     */
+    val folder: String = "",
     val author: String? = null,
     val cover: File? = null,
     val state: ScanRowState = ScanRowState.PENDING,

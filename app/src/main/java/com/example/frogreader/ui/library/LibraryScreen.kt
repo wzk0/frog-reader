@@ -44,7 +44,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.ViewAgenda
+import androidx.compose.material.icons.rounded.ArrowDropDown
 import androidx.compose.material.icons.rounded.AutoStories
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Edit
@@ -117,6 +119,7 @@ import coil3.compose.AsyncImage
 import com.example.frogreader.R
 import com.example.frogreader.ui.components.FrogSegmentedControl
 import com.example.frogreader.data.LibraryViewMode
+import com.example.frogreader.data.LibrarySortMode
 import com.example.frogreader.data.model.Book
 import com.example.frogreader.ui.theme.LocalFrogColors
 import kotlin.math.roundToInt
@@ -242,6 +245,9 @@ fun LibraryScreen(
     val books by viewModel.books.collectAsStateWithLifecycle()
     val readingQueue by viewModel.readingQueue.collectAsStateWithLifecycle()
     val viewMode by viewModel.viewMode.collectAsStateWithLifecycle()
+    val sortMode by viewModel.sortMode.collectAsStateWithLifecycle()
+    // False until the stored order has been read: see LibraryViewModel.
+    val orderingSettled by viewModel.orderingSettled.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
 
     val snackbarHostState = remember { SnackbarHostState() }
@@ -277,13 +283,22 @@ fun LibraryScreen(
     val heroBook = remember(books) {
         books.firstOrNull { it.lastOpenedAtMillis != null } ?: books.firstOrNull()
     }
-    val visibleEntries = remember(entries, books, query, heroBook) {
+    val visibleEntries = remember(entries, books, query, heroBook, sortMode) {
         val filtered = filterEntries(entries, books, query)
+        // A query has its own order — best match first — and re-sorting it by
+        // file name would only bury the answer the user was looking for.
         if (searching) {
             filtered
         } else {
-            filtered.filterNot { it is LibraryEntry.BookEntry && it.book.id == heroBook?.id }
+            arrangeEntries(filtered, sortMode)
+                .filterNot { it is LibraryEntry.BookEntry && it.book.id == heroBook?.id }
         }
+    }
+
+    // What the grid actually draws. Identical to the entries in every mode but
+    // folder grouping, which needs a full-width heading between groups.
+    val slots = remember(visibleEntries, sortMode, searching) {
+        librarySlots(visibleEntries, sortMode, searching)
     }
 
     // What the panel is drawing. It deliberately outlives `openShelfId`: the
@@ -387,11 +402,14 @@ fun LibraryScreen(
         selection.retain(alive)
     }
 
+    // The buzz belongs to the thing that failed, never to a success: every
+    // success message here follows a tap that already fired its own haptic, and
+    // two buzzes a second apart for one tap read as a glitch. Failures still
+    // announce themselves, because nothing else would.
     LaunchedEffect(resources) {
         viewModel.messages.collect { message ->
             when (message) {
                 is LibraryMessage.ReadingQueueAdded -> {
-                    haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                     snackbarHostState.showSnackbar(
                         resources.getString(
                             if (message.alreadyQueued) R.string.library_reading_queue_already_added
@@ -402,7 +420,6 @@ fun LibraryScreen(
                 }
 
                 is LibraryMessage.ReadingQueueRemoved -> {
-                    haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                     snackbarHostState.showSnackbar(
                         resources.getString(R.string.reading_queue_deleted, message.title),
                     )
@@ -414,23 +431,21 @@ fun LibraryScreen(
                 }
 
                 is LibraryMessage.Imported -> {
-                    haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                     snackbarHostState.showSnackbar(
                         resources.getString(R.string.library_imported, message.title),
                     )
                 }
 
                 is LibraryMessage.Replaced -> {
-                    haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                     snackbarHostState.showSnackbar(
                         resources.getString(R.string.library_replaced, message.title),
                     )
                 }
 
                 is LibraryMessage.ImportedMany -> {
-                    haptics.performHapticFeedback(
-                        if (message.failed > 0) HapticFeedbackType.Reject else HapticFeedbackType.Confirm,
-                    )
+                    // A clean batch is a success and stays silent; a partial
+                    // one has failures to report.
+                    if (message.failed > 0) haptics.performHapticFeedback(HapticFeedbackType.Reject)
                     snackbarHostState.showSnackbar(
                         if (message.failed > 0) {
                             resources.getQuantityString(R.plurals.library_imported_many_partial, message.added, message.added, message.failed)
@@ -506,6 +521,7 @@ fun LibraryScreen(
     // item: the lambda below runs during measurement, on every item.
     val bookType = remember(renderMode) { "${renderMode.name}:book" }
     val shelfType = remember(renderMode) { "${renderMode.name}:shelf" }
+    val folderType = remember(renderMode) { "${renderMode.name}:folder" }
 
     val swapProgress = swap.asState()
     // Hoisted so the lambda instance is stable, and read only from inside
@@ -628,6 +644,11 @@ fun LibraryScreen(
                                 haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
                                 viewModel.setViewMode(mode)
                             },
+                            sortMode = sortMode,
+                            onSortMode = { mode ->
+                                haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                viewModel.setSortMode(mode)
+                            },
                             // The row doubles as the selection bar rather than a
                             // top app bar sliding in: the library's header is item
                             // one of this grid and scrolls away, so there is no bar
@@ -650,18 +671,49 @@ fun LibraryScreen(
                     }
                 } else {
                     items(
-                        items = visibleEntries,
-                        // The entry id alone, so a mode swap KEEPS every item
+                        items = slots,
+                        // The slot id alone, so a mode swap KEEPS every item
                         // slot: the cover's image node survives, its remembers
                         // survive, and the grid keeps its scroll anchor. Safe
-                        // because entry items never declare a span — only the
-                        // column count changes, exactly as the full-span header
-                        // above has always done.
+                        // because a slot's span never changes with the mode —
+                        // only the column count does.
                         key = { it.id },
-                        contentType = { entry ->
-                            if (entry is LibraryEntry.ShelfEntry) shelfType else bookType
+                        // Only a folder heading spans the row. Books and
+                        // shelves stay at one cell in both modes, so switching
+                        // grid/list still keeps every key's span unchanged.
+                        span = { slot ->
+                            if (slot is LibrarySlot.Folder) {
+                                GridItemSpan(maxLineSpan)
+                            } else {
+                                GridItemSpan(1)
+                            }
                         },
-                    ) { entry ->
+                        contentType = { slot ->
+                            when (slot) {
+                                is LibrarySlot.Folder -> folderType
+                                is LibrarySlot.Entry ->
+                                    if (slot.entry is LibraryEntry.ShelfEntry) shelfType else bookType
+                            }
+                        },
+                    ) { slot ->
+                        if (slot is LibrarySlot.Folder) {
+                            // Headings animate with their books: grouped mode
+                            // is a reorder, not a new screen, and a heading
+                            // that popped in ahead of its section would be the
+                            // one thing on screen not following the motion.
+                            FolderHeading(
+                                folder = slot.folder,
+                                bookCount = slot.bookCount,
+                                modifier = Modifier.animateItem(
+                                    fadeInSpec = if (swapping) null else ItemFadeSpec,
+                                    fadeOutSpec = if (swapping) null else ItemFadeSpec,
+                                    placementSpec = if (swapping || !orderingSettled) null else ItemPlacementSpec,
+                                ),
+                            )
+                            return@items
+                        }
+
+                        val entry = (slot as LibrarySlot.Entry).entry
                         val itemModifier = Modifier
                             .animateItem(
                                 fadeInSpec = if (swapping) null else ItemFadeSpec,
@@ -676,7 +728,7 @@ fun LibraryScreen(
                                 // would otherwise fly from its grid position to
                                 // its row position while fading in. The
                                 // cross-fade carries that motion instead.
-                                placementSpec = if (swapping) null else ItemPlacementSpec,
+                                placementSpec = if (swapping || !orderingSettled) null else ItemPlacementSpec,
                             )
                             .tileBounds(entry.id, tileBounds)
                             // AFTER tileBounds, so its onGloballyPositioned sits
@@ -1378,6 +1430,8 @@ private fun HeroMenuItem(
 private fun SectionRow(
     viewMode: LibraryViewMode,
     onViewMode: (LibraryViewMode) -> Unit,
+    sortMode: LibrarySortMode,
+    onSortMode: (LibrarySortMode) -> Unit,
     selection: LibrarySelection?,
     onSelectAll: () -> Unit,
     onClearSelection: () -> Unit,
@@ -1400,18 +1454,28 @@ private fun SectionRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = if (selection != null) {
-                pluralStringResource(R.plurals.library_selected_count, selection.count, selection.count).uppercase()
-            } else {
-                stringResource(R.string.library_all_books).uppercase()
-            },
-            fontSize = 12.sp,
-            lineHeight = 14.sp,
-            fontWeight = FontWeight.Medium,
-            letterSpacing = 1.2.sp,
-            color = if (selecting) scheme.primary else scheme.onSurface,
-        )
+        if (selection != null) {
+            Text(
+                text = pluralStringResource(
+                    R.plurals.library_selected_count,
+                    selection.count,
+                    selection.count,
+                ).uppercase(),
+                fontSize = 12.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 1.2.sp,
+                color = scheme.primary,
+            )
+        } else {
+            // The shelf's own name doubles as the order menu: one label where
+            // there used to be a heading, no extra chrome on a row that already
+            // carries the view toggle.
+            SortMenuLabel(
+                sortMode = sortMode,
+                onSortMode = onSortMode,
+            )
+        }
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -1461,6 +1525,124 @@ private fun SectionRow(
         }
     }
 }
+
+/**
+ * The library's order, as a label that opens its own menu.
+ *
+ * The heading it replaces was static text at the same size and weight; keeping
+ * both means switching order changes words and a chevron, never the row's
+ * height or the grid's first position.
+ */
+@Composable
+private fun SortMenuLabel(
+    sortMode: LibrarySortMode,
+    onSortMode: (LibrarySortMode) -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    var open by remember { mutableStateOf(false) }
+
+    Box {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .clickable { open = true }
+                .padding(horizontal = 2.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = stringResource(sortMode.labelRes()).uppercase(),
+                fontSize = 12.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.Medium,
+                letterSpacing = 1.2.sp,
+                color = scheme.onSurface,
+            )
+            Icon(
+                imageVector = Icons.Rounded.ArrowDropDown,
+                contentDescription = stringResource(R.string.library_sort_menu),
+                tint = scheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            LibrarySortMode.entries.forEach { mode ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(mode.labelRes())) },
+                    onClick = {
+                        open = false
+                        if (mode != sortMode) onSortMode(mode)
+                    },
+                    leadingIcon = {
+                        if (mode == sortMode) {
+                            Icon(
+                                imageVector = Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = scheme.primary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        } else {
+                            Spacer(Modifier.size(18.dp))
+                        }
+                    },
+                )
+            }
+        }
+    }
+}
+
+private fun LibrarySortMode.labelRes(): Int = when (this) {
+    LibrarySortMode.RECENT -> R.string.library_sort_recent
+    LibrarySortMode.FILENAME -> R.string.library_sort_filename
+    LibrarySortMode.FOLDER -> R.string.library_sort_folder
+}
+
+/**
+ * One folder's heading, drawn full width between its books when the library is
+ * grouped by folder.
+ */
+@Composable
+private fun FolderHeading(
+    folder: String,
+    bookCount: Int,
+    modifier: Modifier = Modifier,
+) {
+    val scheme = MaterialTheme.colorScheme
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(top = 10.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.FolderOpen,
+            contentDescription = null,
+            tint = scheme.primary,
+            modifier = Modifier.size(15.dp),
+        )
+        Text(
+            text = folder.ifBlank { stringResource(R.string.library_folder_unsorted) }.uppercase(),
+            fontSize = 12.sp,
+            lineHeight = 14.sp,
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 1.2.sp,
+            color = scheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        Text(
+            text = pluralStringResource(R.plurals.library_folder_books, bookCount, bookCount),
+            fontSize = 11.sp,
+            lineHeight = 13.sp,
+            color = scheme.onSurfaceVariant,
+        )
+    }
+}
+
 
 @Composable
 private fun SelectionChip(label: String, onClick: () -> Unit) {
@@ -1602,7 +1784,14 @@ private fun BookGridTile(
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
                 .clip(RoundedCornerShape(18.dp))
-                .combinedClickable(onLongClick = onLongClick, onClick = onClick)
+                // hapticFeedbackEnabled = false: the long-press haptic is fired once by
+                // onEntryLongPress, and combinedClickable fires its own — the two
+                // arrive as a double buzz.
+                .combinedClickable(
+                    hapticFeedbackEnabled = false,
+                    onLongClick = onLongClick,
+                    onClick = onClick,
+                )
                 .selectionOverlay(selected, RoundedCornerShape(18.dp)),
         ) {
             // No title on a coverless plate: the caption below already carries
@@ -1663,7 +1852,14 @@ private fun ShelfGridTile(
                 .aspectRatio(2f / 3f)
                 .clip(RoundedCornerShape(22.dp))
                 .background(frog.folder)
-                .combinedClickable(onLongClick = onLongClick, onClick = onClick)
+                // hapticFeedbackEnabled = false: the long-press haptic is fired once by
+                // onEntryLongPress, and combinedClickable fires its own — the two
+                // arrive as a double buzz.
+                .combinedClickable(
+                    hapticFeedbackEnabled = false,
+                    onLongClick = onLongClick,
+                    onClick = onClick,
+                )
                 .selectionOverlay(selected, RoundedCornerShape(22.dp)),
         ) {
             // The label lives INSIDE the plate now, like a book's caption on its
@@ -1865,7 +2061,14 @@ private fun BookListRow(
                     size = Size(width, size.height),
                 )
             }
-            .combinedClickable(onLongClick = onLongClick, onClick = onClick)
+            // hapticFeedbackEnabled = false: the long-press haptic is fired once by
+                // onEntryLongPress, and combinedClickable fires its own — the two
+                // arrive as a double buzz.
+                .combinedClickable(
+                    hapticFeedbackEnabled = false,
+                    onLongClick = onLongClick,
+                    onClick = onClick,
+                )
             .selectionOverlay(selected, RoundedCornerShape(20.dp)),
     ) {
         Row(
@@ -1949,7 +2152,14 @@ private fun ShelfListRow(
             }
             .clip(RoundedCornerShape(20.dp))
             .background(frog.folder)
-            .combinedClickable(onLongClick = onLongClick, onClick = onClick)
+            // hapticFeedbackEnabled = false: the long-press haptic is fired once by
+                // onEntryLongPress, and combinedClickable fires its own — the two
+                // arrive as a double buzz.
+                .combinedClickable(
+                    hapticFeedbackEnabled = false,
+                    onLongClick = onLongClick,
+                    onClick = onClick,
+                )
             .selectionOverlay(selected, RoundedCornerShape(20.dp))
             .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 12.dp),
     ) {

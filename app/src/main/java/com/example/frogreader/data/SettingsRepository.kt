@@ -65,6 +65,25 @@ enum class BackupFrequency { OFF, DAILY, WEEKLY }
 @kotlinx.serialization.Serializable
 enum class LibraryViewMode { GRID, LIST }
 
+/**
+ * How the library orders its books.
+ *
+ * [RECENT] is the original behaviour — whatever was last opened or added floats
+ * to the top. The other two exist for a library the user maintains by hand on
+ * disk (`01 Dune.epub`), where the order they made is the order they want.
+ */
+@kotlinx.serialization.Serializable
+enum class LibrarySortMode {
+    /** Last opened or added first. */
+    RECENT,
+
+    /** By original file name, in natural order. */
+    FILENAME,
+
+    /** Grouped by the folder each file came from, then by file name. */
+    FOLDER,
+}
+
 /** Settings of the reading surface (font, layout, mode). */
 @kotlinx.serialization.Serializable
 data class ReaderSettings(
@@ -182,6 +201,7 @@ data class AppSettings(
     /** Daily reading goal in minutes (for the stats screen). */
     val dailyGoalMinutes: Int = 30,
     val viewMode: LibraryViewMode = LibraryViewMode.GRID,
+    val librarySort: LibrarySortMode = LibrarySortMode.RECENT,
     val profileName: String = "",
     /** One bounded 512px JPEG, included in existing settings backups. */
     val profileAvatarBase64: String? = null,
@@ -314,6 +334,7 @@ class SettingsRepository(private val context: Context) {
         val profileAvatar = stringPreferencesKey("profile_avatar")
         val readingLogSort = stringPreferencesKey("reading_log_sort")
         val libraryViewMode = stringPreferencesKey("library_view_mode")
+        val librarySort = stringPreferencesKey("library_sort_mode")
         val deviceId = stringPreferencesKey("device_id")
         val backupFolder = stringPreferencesKey("backup_folder_uri")
         val backupFrequency = stringPreferencesKey("backup_frequency")
@@ -377,6 +398,16 @@ class SettingsRepository(private val context: Context) {
         context.settingsDataStore.data.map { prefs ->
             enumOrDefault(prefs[Keys.libraryViewMode], LibraryViewMode.GRID)
         }
+
+    /** How the library is ordered; absent for anyone who never chose. */
+    val librarySortMode: Flow<LibrarySortMode> =
+        context.settingsDataStore.data.map { prefs ->
+            enumOrDefault(prefs[Keys.librarySort], LibrarySortMode.RECENT)
+        }
+
+    suspend fun setLibrarySortMode(mode: LibrarySortMode) {
+        updateApp { it.copy(librarySort = mode) }
+    }
 
     suspend fun setLibraryViewMode(mode: LibraryViewMode) {
         updateApp { it.copy(viewMode = mode) }
@@ -446,6 +477,7 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.autoInvertImages] = updated.autoInvertImages
             prefs[Keys.dailyGoal] = updated.dailyGoalMinutes
             prefs[Keys.libraryViewMode] = updated.viewMode.name
+            prefs[Keys.librarySort] = updated.librarySort.name
             prefs[Keys.profileName] = updated.profileName
             prefs[Keys.readingLogSort] = updated.readingLogSort
             updated.profileAvatarBase64?.let { prefs[Keys.profileAvatar] = it }
@@ -523,6 +555,7 @@ class SettingsRepository(private val context: Context) {
             autoInvertImages = this[Keys.autoInvertImages] ?: defaults.autoInvertImages,
             dailyGoalMinutes = this[Keys.dailyGoal] ?: defaults.dailyGoalMinutes,
             viewMode = enumOrDefault(this[Keys.libraryViewMode], defaults.viewMode),
+            librarySort = enumOrDefault(this[Keys.librarySort], defaults.librarySort),
             profileName = this[Keys.profileName] ?: defaults.profileName,
             profileAvatarBase64 = this[Keys.profileAvatar],
             readingLogSort = this[Keys.readingLogSort] ?: defaults.readingLogSort,

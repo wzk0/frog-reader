@@ -213,7 +213,7 @@ class BookRepositoryUserDataTest {
             repository.loadContent(repository.bookById(wanted.id)!!)
             fail("Expected loadContent to refuse a book with no file")
         } catch (e: IOException) {
-            assertTrue(e.message.orEmpty().contains("no file"))
+            assertTrue(e.message.orEmpty().contains("没有附加文件"))
         }
     }
 

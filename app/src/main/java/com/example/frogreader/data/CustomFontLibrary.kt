@@ -318,15 +318,9 @@ internal fun ReaderSettings.restoreBookFontSiblings(
 internal fun storeFontFile(directory: File, bytes: ByteArray, displayName: String): String? = runCatching {
     require(bytes.size > 12)
     val signature = (0..3).fold(0) { value, index -> (value shl 8) or (bytes[index].toInt() and 255) }
-    val extension = when (signature) {
-        0x00010000, 0x74727565 -> "ttf"
-        0x4f54544f -> "otf"
-        0x74746366 -> "ttc"
-        else -> return null
-    }
+    val extension = fontExtension(signature) ?: return null
     require(directory.isDirectory || directory.mkdirs())
-    val base = displayName.substringBeforeLast('.', displayName)
-        .replace(Regex("""[\\/:*?"<>|]"""), "_").trim().take(100).ifBlank { "font" }
+    val base = fontFileBase(displayName)
     var target = File(directory, "$base.$extension")
     var counter = 2
     while (target.exists()) {
@@ -343,3 +337,70 @@ internal fun storeFontFile(directory: File, bytes: ByteArray, displayName: Strin
     }
     target.absolutePath
 }.getOrNull()
+
+/**
+ * The same import for a file that is already on disk — a download.
+ *
+ * Exists so a 26 MB CJK font never has to be held in the heap twice on the way
+ * in: the bytes go file → file, and the identical-file check compares streams
+ * rather than loading both copies.
+ */
+internal fun storeFontFile(directory: File, source: File, displayName: String): String? = runCatching {
+    require(source.isFile && source.length() > 12)
+    val header = ByteArray(4)
+    RandomAccessFile(source, "r").use { input -> input.readFully(header) }
+    val signature = header.fold(0) { value, byte -> (value shl 8) or (byte.toInt() and 255) }
+    val extension = fontExtension(signature) ?: return null
+    require(directory.isDirectory || directory.mkdirs())
+    val base = fontFileBase(displayName)
+    var target = File(directory, "$base.$extension")
+    var counter = 2
+    while (target.exists()) {
+        if (sameBytes(target, source)) return target.absolutePath
+        target = File(directory, "${base}_${counter++}.$extension")
+    }
+    val pending = File.createTempFile("font-", ".tmp", directory)
+    try {
+        source.copyTo(pending, overwrite = true)
+        // A download can be an error page or a truncated file; this is the same
+        // table check every imported font goes through.
+        require(readCustomFontFace(pending) != null)
+        require(pending.renameTo(target))
+    } finally {
+        pending.delete()
+    }
+    target.absolutePath
+}.getOrNull()
+
+/** Only the four sfnt signatures a font may start with; WOFF and friends are not importable. */
+private fun fontExtension(signature: Int): String? = when (signature) {
+    0x00010000, 0x74727565 -> "ttf"
+    0x4f54544f -> "otf"
+    0x74746366 -> "ttc"
+    else -> null
+}
+
+private fun fontFileBase(displayName: String): String = displayName.substringBeforeLast('.', displayName)
+    .replace(Regex("""[\\/:*?"<>|]"""), "_").trim().take(100).ifBlank { "font" }
+
+private fun sameBytes(a: File, b: File): Boolean = runCatching {
+    if (a.length() != b.length()) return@runCatching false
+    a.inputStream().buffered().use { left ->
+        b.inputStream().buffered().use { right ->
+            val leftBuffer = ByteArray(64 * 1024)
+            val rightBuffer = ByteArray(64 * 1024)
+            var equal = true
+            while (equal) {
+                val leftRead = left.read(leftBuffer)
+                val rightRead = right.read(rightBuffer)
+                if (leftRead != rightRead) {
+                    equal = false
+                    break
+                }
+                if (leftRead < 0) break
+                if (!leftBuffer.copyOf(leftRead).contentEquals(rightBuffer.copyOf(rightRead))) equal = false
+            }
+            equal
+        }
+    }
+}.getOrDefault(false)

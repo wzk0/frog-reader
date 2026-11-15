@@ -970,7 +970,13 @@ private fun ShelfPanelBook(
                     coverRect = Rect(it.positionInRoot(), it.size.toSize())
                 }
                 .clip(RoundedCornerShape(16.dp))
-                .combinedClickable(onLongClick = { onLongClick(coverRect) }, onClick = onClick),
+                // The caller fires the long-press haptic itself (and honours the
+                // vibration setting); this would add a second one.
+                .combinedClickable(
+                    hapticFeedbackEnabled = false,
+                    onLongClick = { onLongClick(coverRect) },
+                    onClick = onClick,
+                ),
         ) {
             BookCover(book = book, coverFile = coverFile, titleSize = 0.sp, padding = 8.dp)
             CoverCaption(

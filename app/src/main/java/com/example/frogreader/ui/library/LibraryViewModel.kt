@@ -33,6 +33,7 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 import com.example.frogreader.data.LibraryViewMode
+import com.example.frogreader.data.LibrarySortMode
 import com.example.frogreader.data.SettingsRepository
 
 sealed interface LibraryMessage {
@@ -93,6 +94,38 @@ class LibraryViewModel(
         setViewMode(if (_viewMode.value == LibraryViewMode.GRID) LibraryViewMode.LIST else LibraryViewMode.GRID)
     }
 
+    private val _sortMode = MutableStateFlow(LibrarySortMode.RECENT)
+
+    /**
+     * How the grid is ordered: by recency (the original behaviour), by the
+     * original file name, or grouped by the folder each file came from.
+     * Persisted, so a library kept as a numbered folder stays in that order
+     * across restarts.
+     */
+    val sortMode: StateFlow<LibrarySortMode> = _sortMode.asStateFlow()
+
+    private val _orderingSettled = MutableStateFlow(false)
+
+    /**
+     * True once the stored order has been read.
+     *
+     * DataStore answers a beat after the first frame, and a library ordered by
+     * folder would otherwise paint in recency order and then visibly rearrange
+     * itself on every cold start. The screen holds placement animations still
+     * until this flips.
+     */
+    val orderingSettled: StateFlow<Boolean> = _orderingSettled.asStateFlow()
+
+    fun setSortMode(mode: LibrarySortMode) {
+        if (_sortMode.value == mode) return
+        _sortMode.value = mode
+        settingsRepository?.let { settings ->
+            viewModelScope.launch(Dispatchers.IO) {
+                runCatching { settings.setLibrarySortMode(mode) }
+            }
+        }
+    }
+
     init {
         // One background sweep per app start (the library screen is the
         // entry point): drop caches orphaned by failed imports, and hand back
@@ -112,6 +145,17 @@ class LibraryViewModel(
                     }
                 }
             }
+            viewModelScope.launch {
+                runCatching {
+                    settingsRepository.librarySortMode.collect { mode ->
+                        _sortMode.value = mode
+                        _orderingSettled.value = true
+                    }
+                }
+            }
+        } else {
+            // No settings store (unit tests): there is nothing to wait for.
+            _orderingSettled.value = true
         }
     }
 

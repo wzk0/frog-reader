@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="settings_reader_chrome_title">Reader controls</string>
-    <string name="settings_reader_chrome_subtitle">Floating panels or full-width bars</string>
-    <string name="reader_chrome_floating">Floating</string>
-    <string name="reader_chrome_classic">Classic</string>
-    <string name="reader_chrome_floating_description">Rounded panels inset from the page edges</string>
-    <string name="reader_chrome_classic_description">Full-width bars at the top and bottom of the page</string>
-    <string name="reader_expand_panel">Expand reading panel</string>
-    <string name="reader_collapse_panel">Collapse reading panel</string>
+    <string name="settings_reader_chrome_title">阅读控件</string>
+    <string name="settings_reader_chrome_subtitle">浮动面板或通栏控制条</string>
+    <string name="reader_chrome_floating">浮动</string>
+    <string name="reader_chrome_classic">经典</string>
+    <string name="reader_chrome_floating_description">与页面边缘留出间距的圆角面板</string>
+    <string name="reader_chrome_classic_description">页面顶部与底部的通栏控制条</string>
+    <string name="reader_expand_panel">展开阅读面板</string>
+    <string name="reader_collapse_panel">收起阅读面板</string>
     <plurals name="reader_chapters_remaining">
-        <item quantity="one">%1$d chapter left</item>
-        <item quantity="other">%1$d chapters left</item>
+        <item quantity="one">还剩 %1$d 章</item>
+        <item quantity="other">还剩 %1$d 章</item>
     </plurals>
-    <string name="reader_last_chapter">Last chapter</string>
-    <string name="reader_chapter_percent_remaining">%1$d%% left in chapter</string>
+    <string name="reader_last_chapter">最后一章</string>
+    <string name="reader_chapter_percent_remaining">本章还剩 %1$d%%</string>
     <string name="reader_book_page_position">%1$d/%2$d</string>
     <string name="reader_book_percent_position">%1$d%%</string>
 </resources>

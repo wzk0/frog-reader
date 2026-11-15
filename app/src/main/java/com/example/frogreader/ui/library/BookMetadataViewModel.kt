@@ -126,7 +126,7 @@ internal class BookMetadataViewModel(
                 persist()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _state.value = _state.value.copy(loading = false, draft = null, error = e.message ?: "Could not read the book file.", errorAction = MetadataErrorAction.LOAD)
+                _state.value = _state.value.copy(loading = false, draft = null, error = e.message ?: "无法读取书籍文件。", errorAction = MetadataErrorAction.LOAD)
             }
         }
     }
@@ -197,7 +197,7 @@ internal class BookMetadataViewModel(
                 persist()
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _state.value = working.copy(busy = false, error = e.message ?: "Could not save the book.", errorAction = MetadataErrorAction.SAVE)
+                _state.value = working.copy(busy = false, error = e.message ?: "无法保存这本书。", errorAction = MetadataErrorAction.SAVE)
                 persist()
             }
         }
@@ -212,7 +212,7 @@ internal class BookMetadataViewModel(
                 _state.value = _state.value.copy(busy = false, exported = true)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                _state.value = _state.value.copy(busy = false, error = e.message ?: "Could not export the book.", errorAction = MetadataErrorAction.EXPORT)
+                _state.value = _state.value.copy(busy = false, error = e.message ?: "无法导出这本书。", errorAction = MetadataErrorAction.EXPORT)
             }
         }
     }
@@ -242,18 +242,18 @@ internal class BookMetadataViewModel(
             while (true) {
                 val n = input.read(buffer)
                 if (n < 0) break
-                if (output.size() + n > 32 * 1024 * 1024) throw IOException("Choose an image smaller than 32 MB.")
+                if (output.size() + n > 32 * 1024 * 1024) throw IOException("请选择小于 32 MB 的图片。")
                 output.write(buffer, 0, n)
             }
             output.toByteArray()
-        } ?: throw IOException("Could not open the selected image.")
+        } ?: throw IOException("无法打开所选图片。")
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
-        require(bounds.outWidth > 0 && bounds.outHeight > 0) { "Choose a supported image, such as JPEG or PNG." }
+        require(bounds.outWidth > 0 && bounds.outHeight > 0) { "请选择受支持的图片，例如 JPEG 或 PNG。" }
         var sample = 1
         while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 2048) sample *= 2
         val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
-            ?: throw IOException("Could not decode the selected image.")
+            ?: throw IOException("无法解析所选图片。")
         val orientation = runCatching {
             ExifInterface(bytes.inputStream()).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
         }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
@@ -275,7 +275,7 @@ internal class BookMetadataViewModel(
                 try {
                     Canvas(opaque).apply { drawColor(Color.WHITE); drawBitmap(oriented, 0f, 0f, null) }
                     val out = ByteArrayOutputStream()
-                    if (!opaque.compress(Bitmap.CompressFormat.JPEG, 93, out)) throw IOException("Could not prepare the cover.")
+                    if (!opaque.compress(Bitmap.CompressFormat.JPEG, 93, out)) throw IOException("无法准备封面。")
                     CoverEdit.Replace(out.toByteArray())
                 } finally { opaque.recycle() }
             } finally { if (oriented !== bitmap) oriented.recycle() }

@@ -153,7 +153,7 @@ fun BookInfoScreen(
         try {
             context.startActivity(Intent.createChooser(BookSharing.intent(context, shared), chooserTitle))
             model.shareFinished()
-        } catch (error: Exception) { model.shareFinished(error.message ?: "No app could open the share menu.") }
+        } catch (error: Exception) { model.shareFinished(error.message ?: "没有应用可以打开分享菜单。") }
     }
     BookInfoContent(state, onBack = { if (!state.removingReading) { if (editing) closeEdit() else onBack() } },
         onEdit = { if (state.readingLogEntry != null) editReview() else editing = true }, onShare = model::share,

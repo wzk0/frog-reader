@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import com.example.frogreader.data.model.Book
 import com.example.frogreader.data.model.ReadingQueueEntry
@@ -86,7 +87,7 @@ private const val TOMBSTONE_LIFETIME_MILLIS = 365L * 24 * 60 * 60 * 1000
 private const val STAGING_LIFETIME_MILLIS = 30L * 60 * 1000
 
 /** The title a book gets when neither the file nor its name offers one. */
-private const val UNTITLED = "Untitled"
+private const val UNTITLED = "未命名"
 
 /** Compression must yield CPU time to the page the user is currently reading. */
 private val readerContentCacheDispatcher by lazy {
@@ -278,7 +279,7 @@ open class BookRepository(private val context: Context? = null) {
                 if (it.day != null) it.toLocalDate() else if (it.month != null)
                     java.time.YearMonth.of(it.year, it.month).atEndOfMonth() else java.time.LocalDate.of(it.year, 12, 31)
             }
-            require(!earliestStart.isAfter(latestEnd)) { "The finish date precedes the start date." }
+            require(!earliestStart.isAfter(latestEnd)) { "结束日期早于开始日期。" }
         }
         updateStored { before ->
             val old = before.user.readingLog.firstOrNull { it.id == id }
@@ -391,13 +392,13 @@ open class BookRepository(private val context: Context? = null) {
     suspend fun prepareReadingLogCover(uri: Uri): String = withContext(Dispatchers.IO) {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         openStream(uri).use { BitmapFactory.decodeStream(it, null, bounds) }
-        require(bounds.outWidth > 0 && bounds.outHeight > 0) { "Unsupported cover image." }
+        require(bounds.outWidth > 0 && bounds.outHeight > 0) { "不支持的封面图片。" }
         val options = BitmapFactory.Options().apply {
             inSampleSize = 1
             while (bounds.outWidth / inSampleSize > 2400 || bounds.outHeight / inSampleSize > 2400) inSampleSize *= 2
         }
         val decoded = openStream(uri).use { BitmapFactory.decodeStream(it, null, options) }
-            ?: throw IOException("Cannot read cover image.")
+            ?: throw IOException("无法读取封面图片。")
         var oriented = decoded
         var cropped: Bitmap? = null
         var scaled: Bitmap? = null
@@ -429,7 +430,7 @@ open class BookRepository(private val context: Context? = null) {
             scaled = outputImage
             coversDir.mkdirs()
             FileOutputStream(temporary).use { out -> check(outputImage.compress(Bitmap.CompressFormat.JPEG, 92, out)); out.fd.sync() }
-            check(temporary.renameTo(target)) { "Cannot save cover image." }
+            check(temporary.renameTo(target)) { "无法保存封面图片。" }
             name
         } catch (error: Exception) { temporary.delete(); target.delete(); throw error }
         finally { listOfNotNull(decoded, oriented, cropped, scaled).distinct().forEach { it.recycle() } }
@@ -447,7 +448,7 @@ open class BookRepository(private val context: Context? = null) {
         val id = if (addToLog) UUID.randomUUID().toString() else null
         updateStored { before ->
             val now = System.currentTimeMillis()
-            val book = mergeBooks(before).firstOrNull { it.id == bookId } ?: throw IOException("Book no longer exists.")
+            val book = mergeBooks(before).firstOrNull { it.id == bookId } ?: throw IOException("这本书已不存在。")
             val fresh = book.copy(startedAtMillis = now, finishedAtMillis = null, lastOpenedAtMillis = now,
                 readingSeconds = 0, progress = ReadingProgress(), status = ReadingStatus.READING,
                 rating = null, ratingHalfStars = null, review = null, reviewUpdatedAtMillis = null,
@@ -461,8 +462,8 @@ open class BookRepository(private val context: Context? = null) {
 
     /** Continue the same abandoned reading, retaining its position, dates, time and review. */
     suspend fun resumeReading(bookId: String) = updateStored { before ->
-        val book = mergeBooks(before).firstOrNull { it.id == bookId } ?: throw IOException("Book no longer exists.")
-        check(book.status == ReadingStatus.ABANDONED || book.status == ReadingStatus.READING) { "This reading cannot be resumed." }
+        val book = mergeBooks(before).firstOrNull { it.id == bookId } ?: throw IOException("这本书已不存在。")
+        check(book.status == ReadingStatus.ABANDONED || book.status == ReadingStatus.READING) { "这次阅读无法继续。" }
         val resumed = book.copy(status = ReadingStatus.READING, finishedAtMillis = null,
             lastOpenedAtMillis = System.currentTimeMillis(), suppressReadingLog = false)
         val entries = before.user.readingLog.map { if (it.id == book.activeReadingLogId)
@@ -475,7 +476,7 @@ open class BookRepository(private val context: Context? = null) {
     /** One consistent snapshot, including priorities, under the write lock. Call on IO. */
     internal fun backupDocument(): BackupDocument = synchronized(indexLock) {
         val current = stored()
-        if (isIndexCorrupted) throw LibraryIndexCorruptedException("Cannot back up corrupted user data.")
+        if (isIndexCorrupted) throw LibraryIndexCorruptedException("用户数据已损坏，无法备份。")
         BackupDocument(mergeBooks(current), current.index.shelves, current.user.readingQueue, current.user.readingLog)
     }
 
@@ -484,7 +485,7 @@ open class BookRepository(private val context: Context? = null) {
         var added = false
         updateStored { before ->
             val book = mergeBooks(before).firstOrNull { it.id == bookId }
-                ?: throw IOException("Library book no longer exists.")
+                ?: throw IOException("书库中的这本书已不存在。")
             if (before.user.readingQueue.any { it.attachment?.id == bookId }) before else {
                 val entry = ReadingQueueEntry(
                     id = UUID.randomUUID().toString(),
@@ -525,7 +526,7 @@ open class BookRepository(private val context: Context? = null) {
                 entries + ReadingQueueEntry(entryId, cleanTitle, cleanAuthor, cleanNote,
                     createdAtMillis = System.currentTimeMillis(), attachment = attachment)
             } else {
-                check(entries.any { it.id == id }) { "Reading Queue entry no longer exists." }
+                check(entries.any { it.id == id }) { "待读书单中的这个条目已不存在。" }
                 entries.map { if (it.id == id) it.copy(title = cleanTitle, author = cleanAuthor, note = cleanNote, attachment = attachment ?: it.attachment) else it }
             }
             before.copy(user = before.user.copy(readingQueue = next))
@@ -551,8 +552,10 @@ open class BookRepository(private val context: Context? = null) {
                 cover = writeCover(id, staged.coverBytes)
                 Book(id, staged.title, staged.author, staged.format, file.name, cover,
                     addedAtMillis = System.currentTimeMillis(), contentHash = staged.contentHash,
-                    sizeBytes = staged.sizeBytes).withParsedMetadata(staged.metadata, staged.format,
-                        file.name, cover, staged.contentHash, staged.sizeBytes)
+                    sizeBytes = staged.sizeBytes, sourceName = staged.sourceName,
+                    sourceFolder = staged.sourceFolder).withParsedMetadata(staged.metadata, staged.format,
+                        file.name, cover, staged.contentHash, staged.sizeBytes,
+                        staged.sourceName, staged.sourceFolder)
             } catch (e: Exception) {
                 file.delete()
                 cover?.let { File(coversDir, it).delete() }
@@ -562,8 +565,8 @@ open class BookRepository(private val context: Context? = null) {
     }
 
     suspend fun attachReadingQueueFile(id: String, attachment: Book) = updateStored { before ->
-        check(before.user.readingQueue.any { it.id == id }) { "Reading Queue entry no longer exists." }
-        check(bookFileFor(attachment) != null) { "The attached file is missing." }
+        check(before.user.readingQueue.any { it.id == id }) { "待读书单中的这个条目已不存在。" }
+        check(bookFileFor(attachment) != null) { "附加的文件已丢失。" }
         before.copy(user = before.user.copy(readingQueue = before.user.readingQueue.map {
             if (it.id == id) it.copy(attachment = attachment) else it
         }))
@@ -599,14 +602,14 @@ open class BookRepository(private val context: Context? = null) {
         var opened: Book? = null
         updateStored { before ->
             val entry = before.user.readingQueue.firstOrNull { it.id == id }
-                ?: throw IOException("Reading Queue entry no longer exists.")
-            val attached = entry.attachment ?: throw IOException("Attach a book file first.")
+                ?: throw IOException("待读书单中的这个条目已不存在。")
+            val attached = entry.attachment ?: throw IOException("请先添加书籍文件。")
             val library = mergeBooks(before)
             // Exact file matches share the existing book and preserve its reading position.
             val existing = library.firstOrNull { it.id == attached.id ||
                 (attached.contentHash != null && it.contentHash == attached.contentHash) }
             check(bookFileFor(existing ?: attached) != null || bookFileFor(attached) != null) {
-                "The attached file is missing."
+                "附加的文件已丢失。"
             }
             val notes = listOfNotNull(existing?.readingQueueNote, entry.note.takeIf { it.isNotBlank() })
                 .distinct().joinToString("\n\n").ifBlank { null }
@@ -793,6 +796,8 @@ open class BookRepository(private val context: Context? = null) {
                     format = format,
                     title = title,
                     author = author,
+                    sourceName = originalName,
+                    sourceFolder = sourceFolderFor(uri),
                     contentHash = hash,
                     sizeBytes = size,
                     coverBytes = metadata.coverBytes,
@@ -858,6 +863,8 @@ open class BookRepository(private val context: Context? = null) {
                 format = staged.format,
                 fileName = stored.name,
                 coverFileName = writeCover(id, staged.coverBytes),
+                sourceName = staged.sourceName,
+                sourceFolder = staged.sourceFolder,
                 addedAtMillis = System.currentTimeMillis(),
                 contentHash = staged.contentHash,
                 sizeBytes = staged.sizeBytes,
@@ -895,7 +902,7 @@ open class BookRepository(private val context: Context? = null) {
      * `updateStored` does not even write them.
      */
     private suspend fun commitOverBook(staged: StagedImport, bookId: String): Book {
-        val existing = bookById(bookId) ?: throw IOException("No such book")
+        val existing = bookById(bookId) ?: throw IOException("没有这本书")
         booksDir.mkdirs()
         val stamp = System.currentTimeMillis()
         val stored = File(booksDir, "$bookId-$stamp.${staged.file.extension}")
@@ -937,6 +944,8 @@ open class BookRepository(private val context: Context? = null) {
                             coverFileName = newCover ?: book.coverFileName,
                             contentHash = staged.contentHash,
                             sizeBytes = staged.sizeBytes,
+                            sourceName = staged.sourceName,
+                            sourceFolder = staged.sourceFolder,
                         ).let { if (anchors == null) it else anchors.reanchor(it) }
                     }
                 }
@@ -1158,12 +1167,19 @@ open class BookRepository(private val context: Context? = null) {
         coverFileName: String?,
         contentHash: String?,
         sizeBytes: Long,
+        /** New file's original name and folder, when the caller has them. */
+        sourceName: String? = null,
+        sourceFolder: String? = null,
     ): Book = copy(
         author = author ?: metadata.authors.takeIf { it.isNotEmpty() }?.joinToString(", ")
             ?: metadata.author,
         format = format,
         fileName = fileName,
         coverFileName = coverFileName,
+        // A replaced file may be laid out differently in the user's folder, so
+        // take the new location when we know it and keep the old one otherwise.
+        sourceName = sourceName ?: this.sourceName,
+        sourceFolder = sourceFolder ?: this.sourceFolder,
         contentHash = contentHash,
         sizeBytes = sizeBytes,
         genres = genres.ifEmpty { metadata.genres },
@@ -1213,7 +1229,7 @@ open class BookRepository(private val context: Context? = null) {
     internal open fun openStream(uri: Uri): InputStream =
         (if (uri.scheme == "file") uri.path?.let { File(it).inputStream() }
         else context?.contentResolver?.openInputStream(uri))
-            ?: throw IOException("Cannot open the selected file")
+            ?: throw IOException("无法打开所选文件")
 
     open suspend fun deleteBook(bookId: String) = withContext(Dispatchers.IO) {
         val book = _books.value.firstOrNull { it.id == bookId } ?: return@withContext
@@ -1336,9 +1352,9 @@ open class BookRepository(private val context: Context? = null) {
     }
 
     private fun parseAndCachePinned(book: Book, onPreview: (BookContent) -> Unit): BookContent {
-        val name = book.fileName ?: throw IOException("This book has no file attached yet")
+        val name = book.fileName ?: throw IOException("这本书还没有附加文件")
         val file = File(booksDir, name)
-        if (!file.exists()) throw IOException("Book file is missing")
+        if (!file.exists()) throw IOException("书籍文件已丢失")
         // LRU maintenance can be walking thousands of old extracted assets.
         // The pin already protects this open; recency IO must not queue its text.
         bookkeeping.launch { readerCacheBudget.touch(book.id) }
@@ -1612,9 +1628,9 @@ open class BookRepository(private val context: Context? = null) {
         updateStored { before ->
             val books = mergeBooks(before)
             val current = books.firstOrNull { it.id == bookId }
-                ?: throw IOException("The book no longer exists.")
+                ?: throw IOException("这本书已不存在。")
             if (current.activeReadingLogId != readingLogId || readingLogId == null && !current.suppressReadingLog) {
-                throw IOException("This reading is no longer current.")
+                throw IOException("这次阅读已不是当前阅读。")
             }
             syncCurrentReadings(split(books.map { book ->
                 if (book.id != bookId) book else book.copy(
@@ -1727,15 +1743,15 @@ open class BookRepository(private val context: Context? = null) {
      * quotes, the rating and the reading position on the old record.
      */
     open suspend fun attachFile(bookId: String, uri: Uri): Book = withContext(Dispatchers.IO) {
-        val c = context ?: throw IOException("Cannot open the selected file")
-        val existing = bookById(bookId) ?: throw IOException("No such book")
-        if (existing.fileName != null) throw IOException("This book already has a file")
+        val c = context ?: throw IOException("无法打开所选文件")
+        val existing = bookById(bookId) ?: throw IOException("没有这本书")
+        if (existing.fileName != null) throw IOException("这本书已经有文件了")
 
         val temp = File.createTempFile("attach-", null, c.cacheDir)
         try {
             c.contentResolver.openInputStream(uri)?.use { input ->
                 temp.outputStream().use { input.copyTo(it) }
-            } ?: throw IOException("Cannot open the selected file")
+            } ?: throw IOException("无法打开所选文件")
 
             val (format, stored) = BookParsers.detectAndStore(temp, booksDir, bookId)
             try {
@@ -1754,6 +1770,10 @@ open class BookRepository(private val context: Context? = null) {
                             coverFileName = coverFileName,
                             contentHash = ContentHash.of(stored),
                             sizeBytes = stored.length(),
+                            // The record existed before the file did, so its
+                            // filing is only learned here.
+                            sourceName = displayNameFor(uri),
+                            sourceFolder = sourceFolderFor(uri),
                         )
                     }
                 }
@@ -1788,13 +1808,13 @@ open class BookRepository(private val context: Context? = null) {
 
     /** File metadata is read afresh so author boundaries are not guessed from a comma-separated label. */
     suspend fun editableMetadata(bookId: String): Pair<Book, EditableBookMetadata> = withContext(Dispatchers.IO) {
-        val book = books.value.firstOrNull { it.id == bookId } ?: throw IOException("Book no longer exists.")
-        val file = bookFileFor(book) ?: throw IOException("Attach the book file before editing its metadata.")
+        val book = books.value.firstOrNull { it.id == bookId } ?: throw IOException("这本书已不存在。")
+        val file = bookFileFor(book) ?: throw IOException("编辑元数据前请先添加书籍文件。")
         book to EditableBookMetadata.from(book, BookParsers.parseMetadata(file, book.format))
     }
 
     suspend fun metadataFileInfo(book: Book) = withContext(Dispatchers.IO) {
-        BookMetadataWriter.fileInfo(bookFileFor(book) ?: throw IOException("Book file is missing."), book.format)
+        BookMetadataWriter.fileInfo(bookFileFor(book) ?: throw IOException("书籍文件已丢失."), book.format)
     }
 
     /**
@@ -1808,9 +1828,9 @@ open class BookRepository(private val context: Context? = null) {
         metadata: EditableBookMetadata,
         cover: CoverEdit = CoverEdit.Keep,
     ): Book = withContext(Dispatchers.IO) {
-        val original = books.value.firstOrNull { it.id == bookId } ?: throw IOException("Book no longer exists.")
-        require(original.fileName == expectedFileName) { "The book file changed. Reopen the editor before saving." }
-        val source = bookFileFor(original) ?: throw IOException("Attach the book file before editing its metadata.")
+        val original = books.value.firstOrNull { it.id == bookId } ?: throw IOException("这本书已不存在。")
+        require(original.fileName == expectedFileName) { "书籍文件已变更，请重新打开编辑器后再保存。" }
+        val source = bookFileFor(original) ?: throw IOException("编辑元数据前请先添加书籍文件。")
         val generation = "$bookId-edit-${UUID.randomUUID()}"
         val target = File(booksDir, "$generation.${source.extension}")
         var newCover: File? = null
@@ -1826,8 +1846,8 @@ open class BookRepository(private val context: Context? = null) {
             // Cancellation after the index commit must never delete its new book file.
             withContext(NonCancellable) {
                 updateIndex { current ->
-                    val live = current.firstOrNull { it.id == bookId } ?: throw IOException("Book no longer exists.")
-                    require(live.fileName == expectedFileName) { "The book file changed. Reopen the editor before saving." }
+                    val live = current.firstOrNull { it.id == bookId } ?: throw IOException("这本书已不存在。")
+                    require(live.fileName == expectedFileName) { "书籍文件已变更，请重新打开编辑器后再保存。" }
                     current.map { book ->
                         if (book.id != bookId) book else book.copy(
                             title = actual.title ?: metadata.title,
@@ -1866,12 +1886,12 @@ open class BookRepository(private val context: Context? = null) {
 
     /** Exports the actual stored book bytes, including metadata edits. */
     suspend fun exportBook(bookId: String, destination: Uri) = withContext(Dispatchers.IO) {
-        val c = context ?: throw IOException("Cannot export without a document provider.")
-        val book = books.value.firstOrNull { it.id == bookId } ?: throw IOException("Book no longer exists.")
-        val file = bookFileFor(book) ?: throw IOException("Book file is missing.")
+        val c = context ?: throw IOException("没有文件提供程序，无法导出。")
+        val book = books.value.firstOrNull { it.id == bookId } ?: throw IOException("这本书已不存在。")
+        val file = bookFileFor(book) ?: throw IOException("书籍文件已丢失.")
         c.contentResolver.openOutputStream(destination, "wt")?.use { output ->
             file.inputStream().use { it.copyTo(output) }
-        } ?: throw IOException("Cannot write to the selected location.")
+        } ?: throw IOException("无法写入所选位置。")
     }
 
     suspend fun toggleBookmark(bookId: String, bookmark: Bookmark) {
@@ -2037,7 +2057,7 @@ open class BookRepository(private val context: Context? = null) {
         } catch (e: JsonStoreCorruptedException) {
             isIndexCorrupted = true
             throw LibraryIndexCorruptedException(
-                e.message ?: "The library index is corrupted or unreadable.",
+                e.message ?: "书库索引已损坏或无法读取。",
                 e,
             )
         }
@@ -2046,7 +2066,7 @@ open class BookRepository(private val context: Context? = null) {
         } catch (e: JsonStoreCorruptedException) {
             isIndexCorrupted = true
             throw LibraryIndexCorruptedException(
-                e.message ?: "The user data store is corrupted or unreadable.",
+                e.message ?: "用户数据已损坏或无法读取。",
                 e,
             )
         }
@@ -2241,7 +2261,7 @@ open class BookRepository(private val context: Context? = null) {
                 // BookRepositoryStressTest's ..._DirectUpdateWithoutPriorRead.
                 val before = stored()
                 if (isIndexCorrupted) {
-                    throw LibraryIndexCorruptedException("Cannot update the library because the data on disk is corrupted.")
+                    throw LibraryIndexCorruptedException("磁盘上的数据已损坏，无法更新书库。")
                 }
 
                 val out = transform(before)
@@ -2284,5 +2304,36 @@ open class BookRepository(private val context: Context? = null) {
             ?.use { cursor ->
                 if (cursor.moveToFirst()) cursor.getString(0) else null
             }
+    }.getOrNull()
+
+    /**
+     * The folder a picked document sits in, as the storage provider describes it
+     * (`Books/Novels` for `primary:Books/Novels/01 Dune.epub`).
+     *
+     * For a document reached through a picked folder — which is how the scan
+     * imports them — the path is made relative to THAT folder, so the grouping
+     * matches what the user sees in their own file manager rather than the
+     * provider's whole volume.
+     *
+     * Only for grouping in the library. Null covers both "the file sits at the
+     * provider's root" and "this provider does not expose a path", which the
+     * library shows the same way: unsorted. Never used to read the file later.
+     */
+    internal open fun sourceFolderFor(uri: Uri): String? = runCatching {
+        // `primary:Books/Novels/01 Dune.epub` → `Books/Novels/01 Dune.epub`.
+        val documentId = DocumentsContract.getDocumentId(uri).substringAfter(':')
+        val rootId = if (DocumentsContract.isTreeUri(uri)) {
+            DocumentsContract.getTreeDocumentId(uri).substringAfter(':')
+        } else {
+            ""
+        }
+        val relative = if (rootId.isNotEmpty() && documentId.startsWith("$rootId/")) {
+            documentId.removePrefix("$rootId/")
+        } else {
+            documentId
+        }
+        relative.substringBeforeLast('/', "")
+            .trim()
+            .takeIf { it.isNotEmpty() }
     }.getOrNull()
 }

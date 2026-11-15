@@ -48,6 +48,6 @@ internal class BackupZipInputStream(input: InputStream) : FilterInputStream(inpu
             val commentLength = byteAt(index + 20) or (byteAt(index + 21) shl 8)
             if (index + 22 + commentLength == count) return
         }
-        throw BackupFormatException("This backup is truncated: the ZIP end record is missing.")
+        throw BackupFormatException("此备份不完整：缺少 ZIP 结束记录。")
     }
 }

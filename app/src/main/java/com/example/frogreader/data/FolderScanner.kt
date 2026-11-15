@@ -21,7 +21,16 @@ data class ScanCandidate(
     val format: BookFormat,
     val sizeBytes: Long,
     val lastModifiedMillis: Long,
+    /**
+     * Folders between the picked root and this file, as `Novels` or
+     * `Novels/Classics`. Empty when the file sits directly in the picked folder.
+     * Used to offer "one shelf per subfolder" after a scan.
+     */
+    val folder: String = "",
 )
+
+/** One folder still to walk: its document id, how deep it is, and its path. */
+private data class PendingFolder(val documentId: String, val depth: Int, val path: String)
 
 /**
  * Walks a folder the user picked, looking for books.
@@ -71,11 +80,11 @@ object FolderScanner {
         maxDepth: Int = MAX_DEPTH,
     ): Flow<ScanCandidate> = flow {
         val root = DocumentsContract.getTreeDocumentId(treeUri)
-        val queue = ArrayDeque<Pair<String, Int>>()
+        val queue = ArrayDeque<PendingFolder>()
         // A tree can contain a shortcut back to a folder already visited, and
         // some providers report one. Without this the walk never ends.
         val seen = HashSet<String>()
-        queue += root to 0
+        queue += PendingFolder(root, 0, "")
         seen += root
 
         val projection = arrayOf(
@@ -88,13 +97,13 @@ object FolderScanner {
 
         while (queue.isNotEmpty()) {
             currentCoroutineContext().ensureActive()
-            val (documentId, depth) = queue.removeFirst()
+            val (documentId, depth, path) = queue.removeFirst()
             val children = DocumentsContract.buildChildDocumentsUriUsingTree(treeUri, documentId)
 
             // Each directory's cursor is drained and closed before descending,
             // so a deep tree never holds more than one open at a time.
             val found = ArrayList<ScanCandidate>()
-            val subdirectories = ArrayList<String>()
+            val subdirectories = ArrayList<PendingFolder>()
             context.contentResolver.query(children, projection, null, null, null)?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DOCUMENT_ID)
                 val nameColumn = cursor.getColumnIndexOrThrow(DocumentsContract.Document.COLUMN_DISPLAY_NAME)
@@ -112,7 +121,16 @@ object FolderScanner {
                         // The missing piece in the old scan: without asking for
                         // the MIME type there was no way to tell a folder from a
                         // file, so it never descended at all.
-                        if (depth < maxDepth && seen.add(childId)) subdirectories += childId
+                        if (depth < maxDepth && seen.add(childId)) {
+                            subdirectories += PendingFolder(
+                                documentId = childId,
+                                depth = depth + 1,
+                                // The folder's own name is the only path
+                                // information every provider gives us, and it is
+                                // the name the user sees on disk.
+                                path = if (path.isEmpty()) name else "$path/$name",
+                            )
+                        }
                         continue
                     }
 
@@ -124,12 +142,13 @@ object FolderScanner {
                         format = format,
                         sizeBytes = cursor.getLong(sizeColumn),
                         lastModifiedMillis = cursor.getLong(dateColumn),
+                        folder = path,
                     )
                 }
             }
 
             found.forEach { emit(it) }
-            subdirectories.forEach { queue += it to depth + 1 }
+            subdirectories.forEach { queue += it }
         }
     }.flowOn(Dispatchers.IO)
 

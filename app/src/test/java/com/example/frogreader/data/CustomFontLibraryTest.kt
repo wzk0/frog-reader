@@ -367,6 +367,113 @@ class CustomFontLibraryTest {
 
     private data class Name(val id: Int, val value: String, val language: Int = 0x0409)
 
+    @Test fun `a downloaded file is stored by name and found again on a second import`() {
+        val fonts = temporary.newFolder("fonts")
+        val download = temporary.newFile("downloaded.ttf").apply {
+            writeBytes(sfnt(listOf(Name(16, "Downloaded"), Name(17, "Regular")), 400))
+        }
+
+        val stored = storeFontFile(fonts, download, "Downloaded.ttf")
+        assertEquals(File(fonts, "Downloaded.ttf").absolutePath, stored)
+
+        // The same file arriving again must not become Downloaded_2.ttf.
+        val again = storeFontFile(fonts, download, "Downloaded.ttf")
+        assertEquals(stored, again)
+        assertEquals(1, fonts.listFiles()!!.size)
+    }
+
+    @Test fun `an error page saved as a font is refused`() {
+        val fonts = temporary.newFolder("fonts")
+        val html = temporary.newFile("font.ttf").apply { writeText("<html>404</html>") }
+
+        assertNull(storeFontFile(fonts, html, "font.ttf"))
+        assertTrue(fonts.listFiles().orEmpty().isEmpty())
+    }
+
+    @Test fun `a zip release is unpacked to the font inside it`() = kotlinx.coroutines.runBlocking {
+        val fonts = temporary.newFolder("fonts")
+        val cache = temporary.newFolder("cache")
+        val face = sfnt(listOf(Name(16, "Smiley"), Name(17, "Oblique")), 400)
+        val archive = ByteArrayOutputStream().also { out ->
+            java.util.zip.ZipOutputStream(out).use { zip ->
+                zip.putNextEntry(java.util.zip.ZipEntry("readme.txt"))
+                zip.write("not a font".toByteArray())
+                zip.closeEntry()
+                zip.putNextEntry(java.util.zip.ZipEntry("SmileySans-Oblique.ttf"))
+                zip.write(face)
+                zip.closeEntry()
+            }
+        }.toByteArray()
+
+        val server = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0)
+        server.createContext("/font.zip") { exchange ->
+            exchange.sendResponseHeaders(200, archive.size.toLong())
+            exchange.responseBody.use { it.write(archive) }
+        }
+        server.start()
+        try {
+            val stored = downloadFontFile(
+                cacheDir = cache,
+                fontsDir = fonts,
+                url = "http://127.0.0.1:${server.address.port}/font.zip",
+                fileName = "SmileySans-Oblique.ttf",
+                archiveEntry = "SmileySans-Oblique.ttf",
+            )
+            assertNotNull(stored)
+            assertEquals("SmileySans-Oblique.ttf", File(stored!!).name)
+            // The archive is gone; what is stored is the face inside it.
+            assertNotNull(readCustomFontFace(File(stored)))
+            assertTrue(cache.listFiles().orEmpty().isEmpty())
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test fun `a zip without the expected entry fails instead of storing something else`() = kotlinx.coroutines.runBlocking {
+        val fonts = temporary.newFolder("fonts")
+        val cache = temporary.newFolder("cache")
+        val archive = ByteArrayOutputStream().also { out ->
+            java.util.zip.ZipOutputStream(out).use { zip ->
+                zip.putNextEntry(java.util.zip.ZipEntry("readme.txt"))
+                zip.write("not a font".toByteArray())
+                zip.closeEntry()
+            }
+        }.toByteArray()
+
+        val server = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0)
+        server.createContext("/font.zip") { exchange ->
+            exchange.sendResponseHeaders(200, archive.size.toLong())
+            exchange.responseBody.use { it.write(archive) }
+        }
+        server.start()
+        try {
+            val stored = downloadFontFile(
+                cacheDir = cache,
+                fontsDir = fonts,
+                url = "http://127.0.0.1:${server.address.port}/font.zip",
+                fileName = "SmileySans-Oblique.ttf",
+                archiveEntry = "SmileySans-Oblique.ttf",
+            )
+            assertNull(stored)
+            assertTrue(fonts.listFiles().orEmpty().isEmpty())
+        } finally {
+            server.stop(0)
+        }
+    }
+
+    @Test fun `a download that cannot connect reports failure instead of throwing`() = kotlinx.coroutines.runBlocking {
+        val fonts = temporary.newFolder("fonts")
+        val result = downloadFontFile(
+            cacheDir = temporary.newFolder("cache"),
+            fontsDir = fonts,
+            // Nothing listens on port 1; the connection is refused immediately.
+            url = "http://127.0.0.1:1/LXGWWenKai-Regular.ttf",
+            fileName = "LXGWWenKai-Regular.ttf",
+        )
+        assertNull(result)
+        assertTrue(fonts.listFiles().orEmpty().isEmpty())
+    }
+
     private fun font(
         filename: String,
         family: String?,

@@ -2,6 +2,12 @@
 
 **A beautiful, free and open-source e-book reader for Android.**
 
+> fork 版本主要添加了以下功能:
+ - 全部汉化
+ - 扫描文件夹时, 快捷添加书籍到书架(若有子文件夹, 可选择将各子文件夹添加为书架; 没有子文件夹则可选择将此文件夹内书籍添加至一个书架)
+ - 按文件夹/文件名排序
+ - 快捷字体下载
+
 Built with **Kotlin, Jetpack Compose and Material 3**, FrogReader combines a carefully designed native interface with a dedicated reading engine, a personal library and tools to track your reading — all without an account or cloud dependency.
 
 [![Release](https://img.shields.io/badge/Release-BETA%202-2f7356?style=for-the-badge&logo=android&logoColor=white)](https://github.com/KNITIPKA/frog-reader/releases/tag/beta-2)
@@ -53,13 +59,13 @@ The **Profile** brings together recent activity, streaks and daily reading goals
 
 ## Supported formats
 
-| Format | Support |
-| --- | --- |
-| **EPUB 2/3** | Reflowable books, contents, publisher CSS, images, embedded fonts and supported advanced layouts |
-| **FB2 / FB2 ZIP** | Sections, notes, poetry, formatting and embedded images |
-| **MOBI / KF8 / AZW3 / PalmDoc** | Supported Kindle text and resource structures |
-| **TXT** | Plain text with UTF-8, marked UTF-16 and legacy Cyrillic decoding |
-| **Markdown** | CommonMark, GFM tables, strikethrough and heading-based navigation |
+| Format                          | Support                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------------------------------------ |
+| **EPUB 2/3**                    | Reflowable books, contents, publisher CSS, images, embedded fonts and supported advanced layouts |
+| **FB2 / FB2 ZIP**               | Sections, notes, poetry, formatting and embedded images                                          |
+| **MOBI / KF8 / AZW3 / PalmDoc** | Supported Kindle text and resource structures                                                    |
+| **TXT**                         | Plain text with UTF-8, marked UTF-16 and legacy Cyrillic decoding                                |
+| **Markdown**                    | CommonMark, GFM tables, strikethrough and heading-based navigation                               |
 
 The engine renders books natively rather than through a full browser CSS implementation. Complex publisher formatting can have limitations. **PDF, KFX, DRM-protected books and full fixed-layout EPUB/KF8 are not supported in Beta 1.** See the [EPUB rendering audit](docs/epub-standard-ebooks-audit.md) for technical details and limitations.
 

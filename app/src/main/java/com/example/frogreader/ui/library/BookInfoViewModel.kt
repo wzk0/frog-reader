@@ -153,7 +153,7 @@ internal class BookInfoViewModel(private val app: FrogReaderApp, private val boo
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
-                shareFinished(error.message ?: "Could not prepare the book file.")
+                shareFinished(error.message ?: "无法准备书籍文件。")
             }
         }
     }

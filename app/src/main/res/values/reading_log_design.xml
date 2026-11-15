@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="reading_log_filter_all">All</string>
-    <string name="reading_log_filter_reading">Reading</string>
-    <string name="reading_log_no_dates">Dates not recorded</string>
-    <string name="reading_log_last_opened_short">Last opened %1$s</string>
-    <string name="reading_log_filter_empty">No readings here yet</string>
-    <string name="reading_log_filter_empty_hint">Readings with this status will appear here.</string>
-    <string name="reading_log_show_all">Show all readings</string>
+    <string name="reading_log_filter_all">全部</string>
+    <string name="reading_log_filter_reading">在读</string>
+    <string name="reading_log_no_dates">未记录日期</string>
+    <string name="reading_log_last_opened_short">上次打开 %1$s</string>
+    <string name="reading_log_filter_empty">这里还没有阅读记录</string>
+    <string name="reading_log_filter_empty_hint">此状态的阅读记录会出现在这里。</string>
+    <string name="reading_log_show_all">显示所有阅读记录</string>
     <string name="reading_log_progress_percent">%1$d%%</string>
-    <string name="reading_log_progress_read">%1$d%% read</string>
-    <string name="reading_log_progress_stopped">Stopped at %1$d%%</string>
+    <string name="reading_log_progress_read">已读 %1$d%%</string>
+    <string name="reading_log_progress_stopped">停在第 %1$d%%</string>
 </resources>

@@ -1,8 +1,8 @@
 <resources>
-    <string name="selection_quote_another_color">New quote</string>
-    <string name="quote_color_default">Theme color</string>
-    <string name="quote_color_blue">Blue</string>
-    <string name="quote_color_rose">Rose</string>
-    <string name="quote_color_amber">Amber</string>
-    <string name="quote_color_violet">Violet</string>
+    <string name="selection_quote_another_color">新建摘录</string>
+    <string name="quote_color_default">主题色</string>
+    <string name="quote_color_blue">蓝</string>
+    <string name="quote_color_rose">玫瑰</string>
+    <string name="quote_color_amber">琥珀</string>
+    <string name="quote_color_violet">紫</string>
 </resources>

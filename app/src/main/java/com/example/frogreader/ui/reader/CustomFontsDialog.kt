@@ -28,6 +28,8 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -55,6 +57,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontSynthesis
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -63,9 +66,11 @@ import com.example.frogreader.data.CustomFontFace
 import com.example.frogreader.data.CustomFontGroup
 import com.example.frogreader.data.groupCustomFonts
 import com.example.frogreader.data.model.EmbeddedFont
+import com.example.frogreader.ui.library.formatFileSize
 import com.example.frogreader.ui.theme.customFontPreviewFamily
 import com.example.frogreader.ui.theme.floatingSurface
 import java.io.File
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -82,6 +87,13 @@ internal fun CustomFontsDialog(
     selectedAxes: Map<String, Float> = emptyMap(),
     selectedAuto: Boolean = false,
     fontsVersion: Int,
+    /** Downloadable typefaces, offered under the user's own library. */
+    presets: List<PresetFont> = emptyList(),
+    installingPreset: String? = null,
+    presetProgress: Float = 0f,
+    installedPresets: Set<String> = emptySet(),
+    onDownloadPreset: (PresetFont) -> Unit = {},
+    onUsePreset: (PresetFont) -> Unit = {},
     onAdd: () -> Unit,
     onPick: (CustomFontFace) -> Unit,
     onPickAuto: (CustomFontGroup) -> Unit = {},
@@ -139,6 +151,12 @@ internal fun CustomFontsDialog(
                     else onPickAuto(group)
                 },
                 onDelete = onDelete,
+                presets = presets,
+                installingPreset = installingPreset,
+                presetProgress = presetProgress,
+                installedPresets = installedPresets,
+                onDownloadPreset = onDownloadPreset,
+                onUsePreset = onUsePreset,
             )
         }
     }
@@ -181,6 +199,12 @@ internal fun CustomFontsContent(
     onPick: (CustomFontFace) -> Unit = {},
     onPickAuto: (CustomFontGroup) -> Unit = {},
     onDelete: (List<String>) -> Unit = {},
+    presets: List<PresetFont> = emptyList(),
+    installingPreset: String? = null,
+    presetProgress: Float = 0f,
+    installedPresets: Set<String> = emptySet(),
+    onDownloadPreset: (PresetFont) -> Unit = {},
+    onUsePreset: (PresetFont) -> Unit = {},
     previewFamily: (CustomFontFace, String) -> FontFamily? = { face, label ->
         customFontPreviewFamily(face.path, face.weight, face.italic, face.variationAxes,
             previewText = label, fallbackFamily = face.fallbackFamily)
@@ -311,6 +335,39 @@ internal fun CustomFontsContent(
                         )
                     }
                 }
+                if (presets.isNotEmpty()) {
+                    item { Spacer(Modifier.height(10.dp)) }
+                    item { FontLibraryLabel(stringResource(R.string.reader_fonts_presets), colors) }
+                    items(presets, key = { preset -> "preset:${preset.id}" }) { preset ->
+                        PresetFontRow(
+                            colors = colors,
+                            preset = preset,
+                            installed = preset.id in installedPresets,
+                            // Null unless this row is the one being fetched, so a
+                            // download keeps the other rows readable and clickable.
+                            progress = if (installingPreset == preset.id) presetProgress else null,
+                            downloadLabel = stringResource(R.string.reader_fonts_download),
+                            downloadingLabel = stringResource(R.string.reader_fonts_downloading),
+                            installedLabel = stringResource(R.string.reader_fonts_installed),
+                            onClick = {
+                                if (preset.id in installedPresets) onUsePreset(preset)
+                                else onDownloadPreset(preset)
+                            },
+                        )
+                    }
+                    item {
+                        Text(
+                            stringResource(R.string.reader_fonts_presets_note),
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                fontSize = 11.sp,
+                                lineHeight = 16.sp,
+                                letterSpacing = 0.sp,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp),
+                        )
+                    }
+                }
             }
         }
     }
@@ -366,6 +423,100 @@ private fun FontLibraryLabel(label: String, colors: ReaderColors) {
         modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp))
 }
 
+/**
+ * One downloadable typeface.
+ *
+ * Not a radio row: nothing is selectable until the file is on the device, so it
+ * carries the download affordance instead of a tick, then the tick once the
+ * file is there. Percent rather than a bare spinner on a 25 MB transfer, so the
+ * wait reads as progress and not as a stall.
+ */
+@Composable
+private fun PresetFontRow(
+    colors: ReaderColors,
+    preset: PresetFont,
+    installed: Boolean,
+    progress: Float?,
+    downloadLabel: String,
+    downloadingLabel: String,
+    installedLabel: String,
+    onClick: () -> Unit,
+) {
+    val scheme = MaterialTheme.colorScheme
+    val haptics = LocalHapticFeedback.current
+    val fraction = progress
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(scheme.surfaceContainer)
+            .clickable(enabled = fraction == null, role = Role.Button) {
+                haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
+                onClick()
+            }
+            .heightIn(min = 48.dp)
+            .padding(vertical = 12.dp, horizontal = 12.dp),
+    ) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text(
+                text = preset.name,
+                style = MaterialTheme.typography.bodyLarge.copy(fontSynthesis = FontSynthesis.None),
+                fontWeight = FontWeight.Medium,
+                color = scheme.onSurface,
+            )
+            Text(
+                // The wait is on the 25 MB file, so say what the wait is and how
+                // far along it is; the size the user agreed to is what shows
+                // before the tap.
+                text = if (fraction != null) {
+                    "$downloadingLabel ${(fraction.coerceAtLeast(0f) * 100).roundToInt()}%"
+                } else {
+                    stringResource(preset.summaryRes) + " · " + formatFileSize(preset.sizeBytes)
+                },
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 11.5.sp,
+                    lineHeight = 15.sp,
+                    letterSpacing = 0.sp,
+                ),
+                color = scheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.width(10.dp))
+        when {
+            fraction != null && fraction >= 0f -> CircularProgressIndicator(
+                progress = { fraction },
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+                color = scheme.primary,
+                trackColor = scheme.surfaceVariant,
+            )
+
+            fraction != null -> CircularProgressIndicator(
+                modifier = Modifier.size(18.dp),
+                strokeWidth = 2.dp,
+                color = scheme.primary,
+            )
+
+            installed -> Icon(
+                Icons.Rounded.Check,
+                contentDescription = installedLabel,
+                tint = scheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+
+            else -> Icon(
+                Icons.Rounded.Download,
+                contentDescription = downloadLabel,
+                tint = colors.onChromeVariant,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+    }
+}
+
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun FontLibraryRow(
@@ -391,6 +542,8 @@ private fun FontLibraryRow(
                     .semantics { this.selected = selected }
                     .combinedClickable(
                         role = if (family) Role.Button else Role.RadioButton,
+                        // The long click below fires the haptic itself.
+                        hapticFeedbackEnabled = false,
                         onClick = onClick,
                         onLongClick = onDelete?.let {
                             {

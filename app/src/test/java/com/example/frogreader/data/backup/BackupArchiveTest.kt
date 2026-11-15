@@ -357,7 +357,7 @@ class BackupArchiveTest {
             BackupArchive.read(ByteArrayInputStream(out.toByteArray()), booksDir, coversDir)
             fail("Expected a foreign zip to be rejected")
         } catch (e: BackupFormatException) {
-            assertTrue(e.message.orEmpty().contains("manifest"))
+            assertTrue(e.message.orEmpty().contains("备份清单"))
         }
     }
 
@@ -419,7 +419,7 @@ class BackupArchiveTest {
             BackupArchive.readManifest(ByteArrayInputStream(out.toByteArray()))
             fail("Expected a newer format version to be refused")
         } catch (e: BackupFormatException) {
-            assertTrue(e.message.orEmpty().contains("newer version"))
+            assertTrue(e.message.orEmpty().contains("更新版本"))
         }
     }
 

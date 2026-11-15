@@ -149,7 +149,7 @@ object BackupArchive {
                 entry = zip.nextEntry
             }
         }
-        throw BackupFormatException("This file has no backup manifest — is it a FrogReader backup?")
+        throw BackupFormatException("此文件没有备份清单——它是 FrogReader 备份吗？")
     }
 
     /**
@@ -220,9 +220,9 @@ object BackupArchive {
         }
 
         val readManifest = manifest
-            ?: throw BackupFormatException("This file has no backup manifest — is it a FrogReader backup?")
+            ?: throw BackupFormatException("此文件没有备份清单——它是 FrogReader 备份吗？")
         val readDocument = document
-            ?: throw BackupFormatException("This backup has no library in it.")
+            ?: throw BackupFormatException("此备份中没有书库。")
         return Contents(readManifest, readDocument, stats, settings, bookFiles, covers)
     }
 
@@ -249,7 +249,7 @@ object BackupArchive {
         val manifest = decode(BackupManifest.serializer(), text, MANIFEST)
         if (manifest.formatVersion > BackupManifest.FORMAT_VERSION) {
             throw BackupFormatException(
-                "This backup was written by a newer version of FrogReader (format " +
+                "此备份由更新版本的 FrogReader 写入（格式 " +
                     "${manifest.formatVersion}). Update the app and try again.",
             )
         }

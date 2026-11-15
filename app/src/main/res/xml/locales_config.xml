@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Add <locale android:name="uk"/> when values-uk/strings.xml lands. -->
+<!-- The default resources are Simplified Chinese, so that is the only language
+     the app actually ships. Add <locale android:name="xx"/> here only together
+     with a values-xx/strings.xml. -->
 <locale-config xmlns:android="http://schemas.android.com/apk/res/android">
-    <locale android:name="en" />
+    <locale android:name="zh" />
 </locale-config>

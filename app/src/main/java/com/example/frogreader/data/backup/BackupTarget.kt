@@ -81,7 +81,7 @@ class SafDocumentTarget(
     override suspend fun write(name: String, body: suspend (OutputStream) -> Unit): BackupRef {
         // The user already named the file in the picker, so `name` is ignored.
         context.contentResolver.openOutputStream(uri, "wt")?.use { body(it) }
-            ?: throw IOException("Cannot write to the chosen file")
+            ?: throw IOException("无法写入所选文件")
         return describe()
     }
 
@@ -89,7 +89,7 @@ class SafDocumentTarget(
 
     override suspend fun open(ref: BackupRef): InputStream =
         context.contentResolver.openInputStream(uri)
-            ?: throw IOException("Cannot open the chosen file")
+            ?: throw IOException("无法打开所选文件")
 
     override suspend fun delete(ref: BackupRef) {
         throw UnsupportedOperationException("A document the user picked is theirs to delete")

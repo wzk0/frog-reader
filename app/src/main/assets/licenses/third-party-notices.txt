@@ -23,6 +23,26 @@ Tabler Icons — Copyright (c) 2020-2026 Paweł Kuna. MIT licence.
 The GitHub, Telegram and Signal icons are derived from Tabler Icons.
 https://github.com/tabler/tabler-icons
 
+Downloadable fonts (not bundled)
+
+Offered from the reader's font sheet. Each file is fetched from its publisher
+when the user asks for it and stays under its own licence:
+
+LXGW WenKai / LXGW Neo ZhiSong / LXGW Neo XiHei (霞鹜文楷 / 霞鹜新致宋 /
+霞鹜新晰黑) — Copyright the LXGW project authors. SIL Open Font License 1.1.
+https://github.com/lxgw
+
+Source Han Serif / Source Han Sans, CN subset (思源宋体 / 思源黑体) —
+Copyright 2014-2021 Adobe. SIL Open Font License 1.1.
+https://github.com/adobe-fonts
+
+Smiley Sans (得意黑) — Copyright 2022 atelier-anchor. SIL Open Font License 1.1.
+https://github.com/atelier-anchor/smiley-sans
+
+MiSans — Copyright Xiaomi. MiSans font licence: free to use, including
+commercially; the font itself may not be modified or resold.
+https://hyperos.mi.com/font/
+
 Runtime libraries
 
 AndroidX / Jetpack, Jetpack Compose and Material icons — Apache License 2.0.

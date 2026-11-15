@@ -1034,6 +1034,17 @@ fun ReaderSettingsControls(
         var showFontDialog by remember { mutableStateOf(false) }
         var fontsVersion by remember { mutableIntStateOf(0) }
         val fontScope = rememberCoroutineScope()
+        val fontsDir = remember { java.io.File(context.filesDir, "fonts") }
+        // Which preset is being fetched, and how far along. One at a time: the
+        // files are megabytes each and the list is short enough that a queue
+        // would only hide which one is failing.
+        var installingPreset by remember { mutableStateOf<String?>(null) }
+        var presetProgress by remember { mutableFloatStateOf(0f) }
+        // Recomputed whenever the library changes, so a font the user imported
+        // from their own files is not offered again as a download.
+        var installedPresets by remember(fontsVersion) {
+            mutableStateOf(PresetFonts.filter { java.io.File(fontsDir, it.fileName).isFile }.map { it.id }.toSet())
+        }
         val fontPicker = androidx.activity.compose.rememberLauncherForActivityResult(
             androidx.activity.result.contract.ActivityResultContracts.OpenMultipleDocuments(),
         ) { uris ->
@@ -1163,6 +1174,82 @@ fun ReaderSettingsControls(
                     com.example.frogreader.ui.theme.forgetCustomFontFiles(deleted)
                     fontsVersion++
                     onUpdate { it.removeCustomFontFiles(deleted) }
+                },
+                presets = PresetFonts,
+                installingPreset = installingPreset,
+                presetProgress = presetProgress,
+                installedPresets = installedPresets,
+                onDownloadPreset = { preset ->
+                    if (installingPreset == null) {
+                        fontScope.launch {
+                            installingPreset = preset.id
+                            presetProgress = 0f
+                            try {
+                                val path = com.example.frogreader.data.downloadFontFile(
+                                    cacheDir = context.cacheDir,
+                                    fontsDir = fontsDir,
+                                    url = preset.url,
+                                    fileName = preset.fileName,
+                                    // Progress arrives on the IO thread; hop back
+                                    // before touching snapshot state.
+                                    onProgress = { fraction ->
+                                        fontScope.launch { presetProgress = fraction }
+                                    },
+                                )
+                                if (path == null) {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        R.string.reader_fonts_download_failed,
+                                        android.widget.Toast.LENGTH_LONG,
+                                    ).show()
+                                    return@launch
+                                }
+                                com.example.frogreader.ui.theme.forgetCustomFontFiles(listOf(path))
+                                val groups = withContext(Dispatchers.IO) {
+                                    groupCustomFonts(fontsDir.listFiles().orEmpty().toList())
+                                }
+                                val family = groups.firstOrNull { it.contains(path) }
+                                val bake = bakeBook(bookFontName != null, keepFont = false)
+                                // Apply it on arrival: a font the user asked for
+                                // by name should already be the one on the page.
+                                onUpdate { settings ->
+                                    val applied = if (family != null) {
+                                        bake(settings).selectCustomFontFamily(family)
+                                    } else {
+                                        bake(settings)
+                                    }
+                                    applied.refreshCustomFontFamily(groups)
+                                }
+                                installedPresets = installedPresets + preset.id
+                                fontsVersion++
+                            } finally {
+                                installingPreset = null
+                            }
+                        }
+                    }
+                },
+                onUsePreset = { preset ->
+                    fontScope.launch {
+                        val groups = withContext(Dispatchers.IO) {
+                            groupCustomFonts(fontsDir.listFiles().orEmpty().toList())
+                        }
+                        val expected = java.io.File(fontsDir, preset.fileName).absolutePath
+                        // The stored name carries a suffix when the same font was
+                        // imported from a file first, so fall back to the base name.
+                        val base = preset.fileName.substringBeforeLast('.')
+                        val family = groups.firstOrNull { it.contains(expected) }
+                            ?: groups.firstOrNull { group ->
+                                group.faces.any { java.io.File(it.path).nameWithoutExtension.startsWith(base) }
+                            }
+                        if (family == null) {
+                            // The file is gone; put the row back to "download".
+                            installedPresets = installedPresets - preset.id
+                            return@launch
+                        }
+                        val bake = bakeBook(bookFontName != null, keepFont = false)
+                        onUpdate { bake(it).selectCustomFontFamily(family) }
+                        showFontDialog = false
+                    }
                 },
                 onDismiss = { showFontDialog = false },
             )

@@ -1,87 +1,87 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <plurals name="reading_log_days">
-        <item quantity="one">%1$d day</item>
-        <item quantity="other">%1$d days</item>
+        <item quantity="one">%1$d 天</item>
+        <item quantity="other">%1$d 天</item>
     </plurals>
     <plurals name="library_imported_many">
-        <item quantity="one">%1$d book added to your library</item>
-        <item quantity="other">%1$d books added to your library</item>
+        <item quantity="one">已向书库添加 %1$d 本书</item>
+        <item quantity="other">已向书库添加 %1$d 本书</item>
     </plurals>
     <plurals name="library_imported_many_partial">
-        <item quantity="one">%1$d book added, %2$d couldn\'t be read</item>
-        <item quantity="other">%1$d books added, %2$d couldn\'t be read</item>
+        <item quantity="one">已添加 %1$d 本，%2$d 本无法读取</item>
+        <item quantity="other">已添加 %1$d 本，%2$d 本无法读取</item>
     </plurals>
     <plurals name="library_selected_count">
-        <item quantity="one">%1$d selected</item>
-        <item quantity="other">%1$d selected</item>
+        <item quantity="one">已选 %1$d 项</item>
+        <item quantity="other">已选 %1$d 项</item>
     </plurals>
     <plurals name="reader_search_matches">
-        <item quantity="one">%1$d match</item>
-        <item quantity="other">%1$d matches</item>
+        <item quantity="one">%1$d 处匹配</item>
+        <item quantity="other">%1$d 处匹配</item>
     </plurals>
     <plurals name="reader_search_pages_range">
-        <item quantity="one">This book has %1$d page</item>
-        <item quantity="other">This book has %1$d pages</item>
+        <item quantity="one">本书共 %1$d 页</item>
+        <item quantity="other">本书共 %1$d 页</item>
     </plurals>
     <plurals name="backup_export_done">
-        <item quantity="one">Backed up %1$d book.</item>
-        <item quantity="other">Backed up %1$d books.</item>
+        <item quantity="one">已备份 %1$d 本书。</item>
+        <item quantity="other">已备份 %1$d 本书。</item>
     </plurals>
     <plurals name="backup_restore_done_missing">
-        <item quantity="one">Restored %1$s and %2$s. %3$d has no file yet.</item>
-        <item quantity="other">Restored %1$s and %2$s. %3$d have no file yet.</item>
+        <item quantity="one">已恢复 %1$s 和 %2$s。%3$d 本还没有文件。</item>
+        <item quantity="other">已恢复 %1$s 和 %2$s。%3$d 本还没有文件。</item>
     </plurals>
     <plurals name="reader_chapter_pages_left">
-        <item quantity="one">%1$d page left in chapter</item>
-        <item quantity="other">%1$d pages left in chapter</item>
+        <item quantity="one">本章还剩 %1$d 页</item>
+        <item quantity="other">本章还剩 %1$d 页</item>
     </plurals>
     <plurals name="completion_days">
-        <item quantity="one">It took you %1$d day</item>
-        <item quantity="other">It took you %1$d days</item>
+        <item quantity="one">你用了 %1$d 天</item>
+        <item quantity="other">你用了 %1$d 天</item>
     </plurals>
     <plurals name="stats_streak_hint">
-        <item quantity="one">Days with at least %1$d minute of reading</item>
-        <item quantity="other">Days with at least %1$d minutes of reading</item>
+        <item quantity="one">每天至少阅读 %1$d 分钟</item>
+        <item quantity="other">每天至少阅读 %1$d 分钟</item>
     </plurals>
     <plurals name="profile_today_reading">
-        <item quantity="one">Today: %1$d minute read, %2$d minute goal</item>
-        <item quantity="other">Today: %1$d minutes read, %2$d minute goal</item>
+        <item quantity="one">今天：已读 %1$d 分钟，目标 %2$d 分钟</item>
+        <item quantity="other">今天：已读 %1$d 分钟，目标 %2$d 分钟</item>
     </plurals>
     <plurals name="profile_day_reading">
-        <item quantity="one">%1$s: %2$d minute, %3$d%% of goal</item>
-        <item quantity="other">%1$s: %2$d minutes, %3$d%% of goal</item>
+        <item quantity="one">%1$s：%2$d 分钟，达目标的 %3$d%%</item>
+        <item quantity="other">%1$s：%2$d 分钟，达目标的 %3$d%%</item>
     </plurals>
     <plurals name="backup_frequency_subtitle">
-        <item quantity="one">The %1$d most recent backup is kept</item>
-        <item quantity="other">The %1$d most recent backups are kept</item>
+        <item quantity="one">保留最近 %1$d 次备份</item>
+        <item quantity="other">保留最近 %1$d 次备份</item>
     </plurals>
     <plurals name="profile_achievements_progress">
-        <item quantity="one">%1$d of %2$d unlocked</item>
-        <item quantity="other">%1$d of %2$d unlocked</item>
+        <item quantity="one">已解锁 %1$d / %2$d</item>
+        <item quantity="other">已解锁 %1$d / %2$d</item>
     </plurals>
     <plurals name="scan_looking">
-        <item quantity="one">%1$d found so far…</item>
-        <item quantity="other">%1$d found so far…</item>
+        <item quantity="one">目前已找到 %1$d 本…</item>
+        <item quantity="other">目前已找到 %1$d 本…</item>
     </plurals>
     <plurals name="scan_found">
-        <item quantity="one">%1$d book · %2$d already in your library</item>
-        <item quantity="other">%1$d books · %2$d already in your library</item>
+        <item quantity="one">%1$d 本书 · %2$d 本已在书库中</item>
+        <item quantity="other">%1$d 本书 · %2$d 本已在书库中</item>
     </plurals>
     <plurals name="scan_selected_count">
-        <item quantity="one">%1$d selected</item>
-        <item quantity="other">%1$d selected</item>
+        <item quantity="one">已选 %1$d 项</item>
+        <item quantity="other">已选 %1$d 项</item>
     </plurals>
     <plurals name="scan_add_n">
-        <item quantity="one">Add %1$d book</item>
-        <item quantity="other">Add %1$d books</item>
+        <item quantity="one">添加 %1$d 本书</item>
+        <item quantity="other">添加 %1$d 本书</item>
     </plurals>
     <plurals name="reading_queue_legacy_note">
-        <item quantity="one">Your existing note is kept in full. To change it, shorten it to %1$d character.</item>
-        <item quantity="other">Your existing note is kept in full. To change it, shorten it to %1$d characters.</item>
+        <item quantity="one">你原有的笔记已完整保留。如需修改，请缩短到 %1$d 个字符。</item>
+        <item quantity="other">你原有的笔记已完整保留。如需修改，请缩短到 %1$d 个字符。</item>
     </plurals>
     <plurals name="backup_log_entries_count">
-        <item quantity="one">%1$d log entry</item>
-        <item quantity="other">%1$d log entries</item>
+        <item quantity="one">%1$d 条记录</item>
+        <item quantity="other">%1$d 条记录</item>
     </plurals>
 </resources>

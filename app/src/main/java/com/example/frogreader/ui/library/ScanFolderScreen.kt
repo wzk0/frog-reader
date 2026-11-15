@@ -23,12 +23,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.FolderOff
+import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
@@ -36,6 +38,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -53,6 +56,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -110,6 +114,9 @@ fun ScanFolderScreen(
     val visible = state.visibleRows
     val importing = state.importing
     val selected = state.selectedCount
+    // The picked folder's own name, which is also what a shelf made from it is
+    // called. Falls back to the generic label when the provider will not say.
+    val folderTitle = FolderScanner.folderName(treeUri) ?: stringResource(R.string.scan_folder_fallback)
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -231,6 +238,38 @@ fun ScanFolderScreen(
                     val allTicked = visible.isNotEmpty() &&
                         visible.all { !it.selectable || it.selected }
 
+                    // One shelf question, asked once the walk is finished: with
+                    // subfolders it is "one shelf each", without them it is
+                    // "this folder as one shelf". Asking mid-walk would flip the
+                    // question under the user's thumb the moment a subfolder
+                    // turned up behind the root's own books.
+                    val subfolders = state.subfolders
+                    if (!state.scanning) {
+                        if (subfolders.isNotEmpty()) {
+                            ShelfSwitchRow(
+                                title = stringResource(R.string.scan_subfolder_shelves),
+                                subtitle = pluralStringResource(
+                                    R.plurals.scan_subfolder_count,
+                                    subfolders.size,
+                                    subfolders.size,
+                                ) + " · " + subfolders.joinToString("、"),
+                                checked = state.subfolderShelves,
+                                enabled = importing == null,
+                                onCheckedChange = { state.subfolderShelves = it },
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp),
+                            )
+                        } else {
+                            ShelfSwitchRow(
+                                title = stringResource(R.string.scan_folder_shelf),
+                                subtitle = stringResource(R.string.scan_folder_shelf_subtitle, folderTitle),
+                                checked = state.folderShelf,
+                                enabled = importing == null,
+                                onCheckedChange = { state.folderShelf = it },
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp),
+                            )
+                        }
+                    }
+
                     // The library's section header, to the pixel: uppercase
                     // label on the left, control on the right.
                     Row(
@@ -347,7 +386,7 @@ fun ScanFolderScreen(
                     MorphingButton(
                         onClick = {
                             haptics.performHapticFeedback(HapticFeedbackType.Confirm)
-                            state.addSelected { added, failed ->
+                            state.addSelected(folderName = folderTitle) { added, failed ->
                                 // Close on success and let the library report
                                 // it: the books are there now, and staying on a
                                 // list where every row says "already added"
@@ -392,6 +431,79 @@ fun ScanFolderScreen(
                 onChoice = { choice, applyToRest -> state.answerConflict(choice, applyToRest) },
             )
         }
+    }
+}
+
+/**
+ * "File these books onto a shelf" — the scan's one optional decision.
+ *
+ * Styled like the settings switch rows (toggleable row, switch as the trailing
+ * control) but compact, because it sits inside the dialog's own list column and
+ * a 72dp setting row would push the books it is about off the screen. The caller
+ * supplies the wording: subfolders, or the folder itself.
+ */
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun ShelfSwitchRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val frog = LocalFrogColors.current
+    val scheme = MaterialTheme.colorScheme
+    val haptics = LocalHapticFeedback.current
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(scheme.surfaceContainerHigh)
+            .toggleable(
+                value = checked,
+                enabled = enabled,
+                role = Role.Switch,
+                onValueChange = { value ->
+                    haptics.performHapticFeedback(
+                        if (value) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
+                    )
+                    onCheckedChange(value)
+                },
+            )
+            .padding(start = 14.dp, end = 10.dp, top = 11.dp, bottom = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.FolderOpen,
+            contentDescription = null,
+            tint = scheme.primary,
+            modifier = Modifier.size(20.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 13.5.sp,
+                lineHeight = 17.sp,
+                fontWeight = FontWeight.Medium,
+                color = frog.ink,
+            )
+            Text(
+                text = subtitle,
+                fontSize = 11.sp,
+                lineHeight = 15.sp,
+                color = frog.ink2,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Switch(
+            checked = checked,
+            enabled = enabled,
+            onCheckedChange = null,
+        )
     }
 }
 

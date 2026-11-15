@@ -1,23 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="selection_define">Define</string>
-    <string name="selection_search">Search</string>
-    <string name="settings_default_dictionary">Default dictionary</string>
-    <string name="settings_default_search_app">Default search app</string>
-    <string name="external_text_translate_description">Choose an app to translate selected text</string>
-    <string name="external_text_define_description">Choose an app to look up selected words</string>
-    <string name="external_text_search_description">Choose an app to search selected text</string>
-    <string name="external_text_process_text_hint">Apps perform the action shown beneath their name.</string>
-    <string name="external_text_translate_empty">No compatible apps found. Install an app that supports processing selected text, then return here.</string>
-    <string name="external_text_define_empty">No compatible dictionary apps found. Install an app that supports dictionary lookup, then return here.</string>
-    <string name="external_text_search_empty">No compatible search apps found. Install an app that supports receiving search queries, then return here.</string>
-    <string name="external_text_ask_every_time">Ask every time</string>
-    <string name="external_text_not_selected">Choose an app the first time</string>
-    <string name="external_text_loading">Loading installed apps…</string>
-    <string name="external_text_unavailable">Selected app unavailable — choose another</string>
+    <string name="selection_define">查词</string>
+    <string name="selection_search">搜索</string>
+    <string name="settings_default_dictionary">默认词典</string>
+    <string name="settings_default_search_app">默认搜索应用</string>
+    <string name="external_text_translate_description">选择用于翻译选中文字的应用</string>
+    <string name="external_text_define_description">选择用于查询选中词语的应用</string>
+    <string name="external_text_search_description">选择用于搜索选中文字的应用</string>
+    <string name="external_text_process_text_hint">应用会执行其名称下方显示的操作。</string>
+    <string name="external_text_translate_empty">未找到兼容的应用。请安装支持处理选中文字的应用后再回来。</string>
+    <string name="external_text_define_empty">未找到兼容的词典应用。请安装支持查词的应用后再回来。</string>
+    <string name="external_text_search_empty">未找到兼容的搜索应用。请安装支持接收搜索词的应用后再回来。</string>
+    <string name="external_text_ask_every_time">每次询问</string>
+    <string name="external_text_not_selected">首次使用时选择应用</string>
+    <string name="external_text_loading">正在加载已安装的应用…</string>
+    <string name="external_text_unavailable">所选应用不可用——请另选一个</string>
     <string name="external_text_app_and_action">%1$s · %2$s</string>
     <string name="external_text_settings_subtitle">%1$s\n%2$s</string>
-    <string name="external_text_launch_failed">Could not open this app. Choose another app.</string>
-    <string name="external_text_save_failed">Could not save your app choice. Please try again.</string>
-    <string name="external_text_selection_too_long">This selection is too long to send to another app. Select a shorter passage and try again.</string>
+    <string name="external_text_launch_failed">无法打开此应用。请另选一个应用。</string>
+    <string name="external_text_save_failed">无法保存你的应用选择。请重试。</string>
+    <string name="external_text_selection_too_long">选中的内容太长，无法发送给其他应用。请选择更短的一段再试。</string>
 </resources>

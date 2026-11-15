@@ -1,15 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="welcome_title">Welcome to\nFrog Reader</string>
-    <string name="welcome_subtitle">Choose a few preferences to get started. You can change everything later in Settings.</string>
-    <string name="welcome_controls_title">Reading controls</string>
-    <string name="welcome_controls_subtitle">Choose your reader layout</string>
-    <string name="welcome_startup_subtitle">Where Frog Reader starts</string>
-    <string name="welcome_theme_title">Theme</string>
-    <string name="welcome_theme_subtitle">Choose the look of your library</string>
-    <string name="welcome_continue">Continue</string>
-    <string name="welcome_saving">Saving…</string>
-    <string name="welcome_save_error">Couldn’t save your preferences. Please try again.</string>
-    <string name="welcome_load_error">Couldn’t load your preferences. Please try again.</string>
-    <string name="welcome_retry">Try again</string>
+    <string name="welcome_title">欢迎使用\nFrog Reader</string>
+    <string name="welcome_subtitle">选择几项偏好即可开始。之后可以在设置中随时更改。</string>
+    <string name="welcome_controls_title">阅读控件</string>
+    <string name="welcome_controls_subtitle">选择阅读器布局</string>
+    <string name="welcome_startup_subtitle">Frog Reader 的起始页面</string>
+    <string name="welcome_theme_title">主题</string>
+    <string name="welcome_theme_subtitle">选择书库的外观</string>
+    <string name="welcome_continue">继续</string>
+    <string name="welcome_saving">正在保存…</string>
+    <string name="welcome_save_error">无法保存你的偏好设置。请重试。</string>
+    <string name="welcome_load_error">无法加载你的偏好设置。请重试。</string>
+    <string name="welcome_retry">重试</string>
 </resources>

@@ -70,6 +70,10 @@ class StagedImport internal constructor(
     val format: BookFormat,
     val title: String,
     val author: String?,
+    /** Original file name; becomes the book's `sourceName`. */
+    val sourceName: String? = null,
+    /** Folder the file came from; becomes the book's `sourceFolder`. */
+    val sourceFolder: String? = null,
     val contentHash: String,
     val sizeBytes: Long,
     /** Cover art from the file itself; null when it has none. */

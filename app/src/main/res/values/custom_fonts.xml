@@ -1,9 +1,22 @@
 <resources>
-    <string name="reader_fonts_back">Back to font families</string>
-    <string name="reader_fonts_saved">Your font families</string>
-    <string name="reader_font_family_auto">Auto</string>
-    <string name="reader_font_family_auto_subtitle">Use entire font family</string>
-    <string name="reader_font_family_auto_description">Automatically matches font styles to the book.</string>
-    <string name="reader_font_delete_family">Delete family</string>
-    <string name="reader_fonts_import_failed">Some files could not be added. Choose valid TTF, OTF or TTC fonts.</string>
+    <string name="reader_fonts_back">返回字体族</string>
+    <string name="reader_fonts_saved">你的字体族</string>
+    <string name="reader_font_family_auto">自动</string>
+    <string name="reader_font_family_auto_subtitle">使用整个字体族</string>
+    <string name="reader_font_family_auto_description">自动为书籍匹配字体样式。</string>
+    <string name="reader_font_delete_family">删除字体族</string>
+    <string name="reader_fonts_presets">在线字体</string>
+    <string name="reader_fonts_download">下载</string>
+    <string name="reader_fonts_downloading">正在下载</string>
+    <string name="reader_fonts_installed">已安装</string>
+    <string name="reader_fonts_download_failed">字体下载失败，请检查网络后重试。</string>
+    <string name="reader_fonts_presets_note">字体版权归各出品方所有，均可免费商用：霞鹜系列、思源系列与得意黑遵循 SIL OFL 1.1，MiSans 遵循小米字体许可。下载会连接 GitHub 或小米 CDN，不会发送任何阅读或账号信息。</string>
+    <string name="reader_font_preset_wenkai">楷体 · 长文阅读最舒适</string>
+    <string name="reader_font_preset_zhisong">宋体 · 纸书排版质感</string>
+    <string name="reader_font_preset_xihei">黑体 · 屏幕显示清晰</string>
+    <string name="reader_font_preset_source_serif">宋体 · Adobe 思源系列</string>
+    <string name="reader_font_preset_source_sans">黑体 · Adobe 思源系列</string>
+    <string name="reader_font_preset_misans">现代黑体 · 小米出品</string>
+    <string name="reader_font_preset_smiley">倾斜黑体 · 标题感强</string>
+    <string name="reader_fonts_import_failed">部分文件无法添加。请选择有效的 TTF、OTF 或 TTC 字体。</string>
 </resources>
