@@ -25,6 +25,8 @@ local.properties
 /signing.properties
 /keystore.properties
 /release-signing.properties
+# Written by scripts/release-signing.sh; holds the keystore passwords.
+/release-signing.env
 
 # Developer and tooling scratch directories
 .agents/

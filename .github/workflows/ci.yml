@@ -49,6 +49,31 @@ jobs:
       - name: Assemble debug APK
         run: ./gradlew assembleDebug --stacktrace
 
+      # The four signing secrets are optional: without them the release APK is
+      # still built (and lint-checked), just unsigned. They are produced by
+      # scripts/release-signing.sh and never live in the repository.
+      - name: Decode release keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.FROGREADER_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.FROGREADER_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.FROGREADER_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.FROGREADER_KEY_PASSWORD }}
+          KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ] || [ -z "$STORE_PASSWORD" ] || \
+             [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "::warning::Release signing secrets are missing; the release APK will be unsigned."
+            exit 0
+          fi
+          printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$KEYSTORE_PATH"
+          chmod 600 "$KEYSTORE_PATH"
+          {
+            echo "FROGREADER_KEYSTORE_PATH=$KEYSTORE_PATH"
+            echo "FROGREADER_KEYSTORE_PASSWORD=$STORE_PASSWORD"
+            echo "FROGREADER_KEY_ALIAS=$KEY_ALIAS"
+            echo "FROGREADER_KEY_PASSWORD=$KEY_PASSWORD"
+          } >> "$GITHUB_ENV"
+
       - name: Verify optimized release and Android lint
         run: ./gradlew :app:assembleRelease :app:lintDebug :app:lintRelease --stacktrace --max-workers=2
 
@@ -58,4 +83,12 @@ jobs:
         with:
           name: FrogReader-debug
           path: app/build/outputs/apk/debug/*.apk
+          retention-days: 7
+
+      - name: Upload Release APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: FrogReader-release
+          path: app/build/outputs/apk/release/*.apk
           retention-days: 7

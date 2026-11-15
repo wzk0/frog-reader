@@ -20,7 +20,7 @@ import org.junit.Test
 
 class AboutDiagnosticsTest {
     private val device = DeviceDiagnosticInfo(
-        packageName = "knitipka.frogreader", debuggable = false,
+        packageName = "github.wzk0.frogreader", debuggable = false,
         manufacturer = "Google", model = "Pixel", androidVersion = "17", api = 37,
         securityPatch = "2026-09-01", abis = listOf("arm64-v8a"),
         displayWidthPx = 1080, displayHeightPx = 2424,

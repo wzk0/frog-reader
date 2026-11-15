@@ -19,6 +19,6 @@ class ExampleInstrumentedTest {
     fun useAppContext() {
         // Context of the app under test.
         val appContext = InstrumentationRegistry.getInstrumentation().targetContext
-        assertEquals("knitipka.frogreader", appContext.packageName)
+        assertEquals("github.wzk0.frogreader", appContext.packageName)
     }
 }

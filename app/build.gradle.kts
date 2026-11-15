@@ -35,7 +35,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "knitipka.frogreader"
+        applicationId = "github.wzk0.frogreader"
         minSdk = 26
         targetSdk = 36
         versionCode = releaseVersionCode
