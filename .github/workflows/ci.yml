@@ -1,5 +1,9 @@
 name: CI
 
+# Everything here ships the release variant: the fork distributes signed
+# release APKs only, so building and linting the debug variant as well was
+# paying for an artifact nobody downloads. A debug APK is one local
+# `./gradlew assembleDebug` away when it is actually wanted.
 on:
   push:
     branches: [ main ]
@@ -16,8 +20,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
-    name: Build & Test
+  release:
+    name: Test, build and lint
     runs-on: ubuntu-latest
     timeout-minutes: 35
 
@@ -34,7 +38,7 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Accept Android SDK licenses and install platform
+      - name: Install Android SDK packages
         run: |
           # Ignore only yes's SIGPIPE; an sdkmanager failure still fails CI.
           (set +o pipefail; yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null)
@@ -43,14 +47,14 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # `test` runs the suite AGP actually creates here — the debug unit-test
+      # variant; the optimised release variant has none, so there is nothing to
+      # halve by naming a variant explicitly.
       - name: Run unit tests
         run: ./gradlew test --stacktrace
 
-      - name: Assemble debug APK
-        run: ./gradlew assembleDebug --stacktrace
-
       # The four signing secrets are optional: without them the release APK is
-      # still built (and lint-checked), just unsigned. They are produced by
+      # still built and lint-checked, just unsigned. They come from
       # scripts/release-signing.sh and never live in the repository.
       - name: Decode release keystore
         env:
@@ -74,18 +78,10 @@ jobs:
             echo "FROGREADER_KEY_PASSWORD=$KEY_PASSWORD"
           } >> "$GITHUB_ENV"
 
-      - name: Verify optimized release and Android lint
-        run: ./gradlew :app:assembleRelease :app:lintDebug :app:lintRelease --stacktrace --max-workers=2
+      - name: Build and lint the release variant
+        run: ./gradlew :app:assembleRelease :app:lintRelease --stacktrace --max-workers=2
 
-      - name: Upload Debug APK
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: FrogReader-debug
-          path: app/build/outputs/apk/debug/*.apk
-          retention-days: 7
-
-      - name: Upload Release APK
+      - name: Upload release APK
         if: success()
         uses: actions/upload-artifact@v4
         with:

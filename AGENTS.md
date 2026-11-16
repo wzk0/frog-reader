@@ -33,10 +33,13 @@ API 时需要 `@OptIn(ExperimentalMaterial3ExpressiveApi::class)`，本项目一
 ./gradlew :app:compileDebugKotlin                 # 最快的语法检查
 ./gradlew :app:testDebugUnitTest                  # JVM 单测（本项目 1951 项，约 20 s）
 ./gradlew :app:testDebugUnitTest --tests "com.example.frogreader.ui.LibrarySortTest"
-./gradlew :app:assembleDebug                      # 出 APK：app/build/outputs/apk/debug/
+./gradlew :app:assembleDebug                      # 调试包：app/build/outputs/apk/debug/
 ./gradlew :app:lintDebug                          # 首次约 5 min，之后增量很快
 . ./release-signing.env && ./gradlew :app:assembleRelease   # 签名 release（见 §8）
 ```
+
+只有 debug 单测变体存在（`:app:testReleaseUnitTest` 不存在，release 开了 R8 优化），
+所以 `./gradlew test` 与 `:app:testDebugUnitTest` 等价。
 
 **16 GB 内存的机器上必须降堆**，否则 Gradle/Kotlin/R8 两个 4 GB daemon 会把系统内存吃光被 OOM kill
 （本机 `gradle.properties` 是 `-Xmx4096m` + `-Xmx4096m`）：
@@ -198,14 +201,21 @@ UI 层只看到合并后的 `Book`；保存时 `BookRepository` 比较新旧对�
 ## 8. CI 与发布签名
 
 ### 8.1 CI（`.github/workflows/ci.yml`）
-`push` 到 `main`、`alpha-*|beta-*|v*` tag、PR、手动触发。JDK 21 + sdkmanager 装 `platforms;android-37.0`
-与 `build-tools;37.0.0`，然后：
+`push` 到 `main`、`alpha-*|beta-*|v*` tag、PR、手动触发（`workflow_dispatch`）。只有一个 job
+`release`（Test, build and lint），只产出**要发布的 variant**：
 
-1. `./gradlew test`
-2. `./gradlew assembleDebug`
-3. 解码签名密钥（四个 secret 缺一则只警告，release 不签名地继续编译）
-4. `./gradlew :app:assembleRelease :app:lintDebug :app:lintRelease --max-workers=2`
-5. 上传 artifact：`FrogReader-debug`、`FrogReader-release`（签名后才有意义）
+1. JDK 21（temurin，`cache: gradle`）+ sdkmanager 装 `platforms;android-37.0`、`build-tools;37.0.0`
+2. `./gradlew test` —— AGP 在这里只生成 debug 单测变体（release 开了 R8 优化，没有单测变体），
+   所以 `test` 就是全部；不要写 `:app:testReleaseUnitTest`，那个任务不存在
+3. 解码签名密钥（四个 secret 缺一则只 warning，release 不签名地继续编译）
+4. `./gradlew :app:assembleRelease :app:lintRelease --max-workers=2` —— `assembleRelease` 内含
+   `lintVitalRelease`，完整的 `lintRelease` 再给出可读报告
+5. 上传 artifact：`FrogReader-release`（签名齐全时就是可直接安装/分发的包）
+
+**不要加回 `assembleDebug` / `lintDebug` / debug artifact**：fork 只分发签名 release 包，
+debug 版需要时本地 `./gradlew :app:assembleDebug` 即可，CI 上那是纯等待。
+若将来要「打 tag 自动发 GitHub Release」，在 job 里加 `permissions: contents: write` +
+`gh release create`（或 `softprops/action-gh-release`），资产仍是 APK + `SHA256SUMS.txt`。
 
 ### 8.2 签名脚本（`scripts/release-signing.sh`）
 无参数运行一次即可：生成 PKCS12 keystore（RSA 4096 / 10000 天 / DN `CN=<appId>`）+ 本地
@@ -288,7 +298,7 @@ comm -23 /tmp/old /tmp/new     # 少了哪些
 | `ui/components/*` | 分段控件、snackbar、翻页胶囊 |
 | `ui/settings/SettingsComponents.kt` | 设置行、开关行、选择行（含触感） |
 | `scripts/release-signing.sh` | keystore + GitHub secrets + 本地 env |
-| `.github/workflows/ci.yml` | 测试 → 双构建 → lint → 双 artifact |
+| `.github/workflows/ci.yml` | 单测 → 签名 release 构建 + lint → 一个 artifact |
 | `app/build.gradle.kts` 的 signingConfig 段 | 环境变量驱动的可选签名 |
 | `app/src/main/keepRules/rules.keep` | 序列化模型的 R8 保留 |
 
