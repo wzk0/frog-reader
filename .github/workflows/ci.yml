@@ -1,15 +1,16 @@
 name: CI
 
-# Everything here ships the release variant: the fork distributes signed
-# release APKs only, so building and linting the debug variant as well was
-# paying for an artifact nobody downloads. A debug APK is one local
-# `./gradlew assembleDebug` away when it is actually wanted.
+# Release builds are signed: the release job decodes the four FROGREADER_*
+# secrets into $RUNNER_TEMP before Gradle runs, and app/build.gradle.kts only
+# creates the externalRelease signingConfig when FROGREADER_KEYSTORE_PATH is
+# set. The stored keystore must be the certificate existing installs trust
+# (see docs/releasing.md) — CI never falls back to a machine's debug key.
 on:
   push:
-    branches: [ main ]
-    tags: [ 'alpha-*', 'beta-*', 'v*' ]
+    branches: [main]
+    tags: ['alpha-*', 'beta-*', 'v*']
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -19,43 +20,125 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  JAVA_VERSION: '21'
+  ANDROID_PLATFORM: 'platforms;android-37.0'
+  ANDROID_BUILD_TOOLS: 'build-tools;37.0.0'
+  APK_DIR: app/build/outputs/apk/release
+
 jobs:
-  release:
-    name: Test, build and lint
+  # 日常 Push：快速检查，不打包 APK
+  quick-check:
+    name: Quick Check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 20
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           persist-credentials: false
 
-      - name: Set up JDK 21
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
           cache: gradle
 
-      - name: Install Android SDK packages
+      - name: Install Android SDK
         run: |
-          # Ignore only yes's SIGPIPE; an sdkmanager failure still fails CI.
           (set +o pipefail; yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null)
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;37.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "${{ env.ANDROID_PLATFORM }}" \
+            "${{ env.ANDROID_BUILD_TOOLS }}"
 
-      - name: Grant execute permission for gradlew
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      - name: Compile Debug Kotlin
+        run: ./gradlew :app:compileDebugKotlin --stacktrace
+
+  # PR：完整验证，不发布 APK
+  pull-request-check:
+    name: Pull Request Check
+    if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Install Android SDK
+        run: |
+          (set +o pipefail; yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null)
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "${{ env.ANDROID_PLATFORM }}" \
+            "${{ env.ANDROID_BUILD_TOOLS }}"
+
+      - name: Grant execute permission
         run: chmod +x gradlew
 
       # `test` runs the suite AGP actually creates here — the debug unit-test
-      # variant; the optimised release variant has none, so there is nothing to
-      # halve by naming a variant explicitly.
+      # variant; the optimised release variant has none.
       - name: Run unit tests
         run: ./gradlew test --stacktrace
 
-      # The four signing secrets are optional: without them the release APK is
-      # still built and lint-checked, just unsigned. They come from
-      # scripts/release-signing.sh and never live in the repository.
+      - name: Build Debug
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Run Android Lint
+        run: ./gradlew :app:lintDebug --stacktrace
+
+  # Tag：只构建和发布 Release APK
+  release:
+    name: Build Release
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Install Android SDK
+        run: |
+          (set +o pipefail; yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null)
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "${{ env.ANDROID_PLATFORM }}" \
+            "${{ env.ANDROID_BUILD_TOOLS }}"
+
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      - name: Run unit tests
+        run: ./gradlew test --stacktrace
+
+      # Every tag (alpha-*/beta-*/v*) publishes a downloadable APK, so all four
+      # secrets are mandatory: no unsigned fallback on tag builds.
       - name: Decode release keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.FROGREADER_KEYSTORE_BASE64 }}
@@ -63,9 +146,14 @@ jobs:
           KEY_ALIAS: ${{ secrets.FROGREADER_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.FROGREADER_KEY_PASSWORD }}
           KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+          GITHUB_REF: ${{ github.ref }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ] || [ -z "$STORE_PASSWORD" ] || \
              [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+              echo "::error::A release tag needs all four FROGREADER_* signing secrets."
+              exit 1
+            fi
             echo "::warning::Release signing secrets are missing; the release APK will be unsigned."
             exit 0
           fi
@@ -78,13 +166,65 @@ jobs:
             echo "FROGREADER_KEY_PASSWORD=$KEY_PASSWORD"
           } >> "$GITHUB_ENV"
 
-      - name: Build and lint the release variant
-        run: ./gradlew :app:assembleRelease :app:lintRelease --stacktrace --max-workers=2
+      # The external keystore from the secrets is used; -PlegacyReleaseSigning
+      # is deliberately not passed, so a stray debug key can never sign a tag.
+      - name: Build Release and Lint
+        run: |
+          ./gradlew :app:assembleRelease :app:lintRelease \
+            --stacktrace --max-workers=2
 
-      - name: Upload release APK
-        if: success()
+      # Fails the tag build if the APK came out unsigned or with another key.
+      - name: Verify APK signature
+        run: |
+          set -euo pipefail
+          build_tools="${ANDROID_BUILD_TOOLS#build-tools;}"
+          "$ANDROID_HOME/build-tools/$build_tools/apksigner" \
+            verify --verbose --print-certs "$APK_DIR"/*.apk
+
+      # Name the asset the way the release docs promise it:
+      # version.properties name "BETA 2" -> FrogReader-BETA-2.apk
+      - name: Name the APK and generate checksums
+        run: |
+          set -euo pipefail
+          version_name=$(sed -n 's/^name=//p' version.properties)
+          asset="FrogReader-${version_name// /-}.apk"
+          mkdir -p dist
+          mv "$APK_DIR"/*.apk "dist/$asset"
+          cd dist
+          sha256sum ./*.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          {
+            echo "RELEASE_TITLE=Frog Reader $version_name"
+          } >> "$GITHUB_ENV"
+
+      # 只收集 Release 目录，绝不收集 Debug APK
+      - name: Upload Release APK
         uses: actions/upload-artifact@v4
         with:
           name: FrogReader-release
-          path: app/build/outputs/apk/release/*.apk
+          path: dist/*.apk
+          if-no-files-found: error
           retention-days: 7
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # alpha-*/beta-* are prereleases; /releases/latest must stay stable.
+          prerelease=()
+          case "$TAG" in
+            alpha-*|beta-*) prerelease=(--prerelease) ;;
+          esac
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" dist/*.apk dist/SHA256SUMS.txt --clobber
+            gh release edit "$TAG" --title "$RELEASE_TITLE" \
+              "${prerelease[@]}" --generate-notes
+          else
+            gh release create "$TAG" dist/*.apk dist/SHA256SUMS.txt \
+              --title "$RELEASE_TITLE" --verify-tag \
+              "${prerelease[@]}" --generate-notes
+          fi

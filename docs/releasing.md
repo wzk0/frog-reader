@@ -21,10 +21,13 @@ The current milestone is **BETA 2**, tag `beta-2`, `versionName = BETA 2`,
    the APK is not debuggable. Record the APK SHA-256.
 6. Ensure the signing certificate matches the previous published APK before
    distributing an update. Keep the private key backed up outside the checkout.
-7. Push reviewed commits to `main`, wait for CI, tag the verified commit, and
-   upload the optimized APK plus `SHA256SUMS.txt`. Mark beta releases as
-   prereleases and link to their tag directly; GitHub's `/releases/latest`
-   normally points to a stable release.
+7. Push reviewed commits to `main`, wait for CI, then tag the verified commit
+   and push the tag. CI on the tag builds, signs (all four `FROGREADER_*`
+   secrets are required — a tag never publishes an unsigned APK), verifies the
+   signature with `apksigner`, and publishes the release itself with
+   `FrogReader-<versionName>.apk` plus `SHA256SUMS.txt`. Tags matching
+   `alpha-*` / `beta-*` are created as prereleases, so `/releases/latest` stays
+   on the stable line; link to the prerelease tag directly.
 
 ## Signing
 

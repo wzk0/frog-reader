@@ -201,21 +201,26 @@ UI 层只看到合并后的 `Book`；保存时 `BookRepository` 比较新旧对�
 ## 8. CI 与发布签名
 
 ### 8.1 CI（`.github/workflows/ci.yml`）
-`push` 到 `main`、`alpha-*|beta-*|v*` tag、PR、手动触发（`workflow_dispatch`）。只有一个 job
-`release`（Test, build and lint），只产出**要发布的 variant**：
+触发：`push` 到 `main`、`alpha-*|beta-*|v*` tag、PR、手动触发（`workflow_dispatch`）。三个 job：
 
-1. JDK 21（temurin，`cache: gradle`）+ sdkmanager 装 `platforms;android-37.0`、`build-tools;37.0.0`
-2. `./gradlew test` —— AGP 在这里只生成 debug 单测变体（release 开了 R8 优化，没有单测变体），
-   所以 `test` 就是全部；不要写 `:app:testReleaseUnitTest`，那个任务不存在
-3. 解码签名密钥（四个 secret 缺一则只 warning，release 不签名地继续编译）
-4. `./gradlew :app:assembleRelease :app:lintRelease --max-workers=2` —— `assembleRelease` 内含
-   `lintVitalRelease`，完整的 `lintRelease` 再给出可读报告
-5. 上传 artifact：`FrogReader-release`（签名齐全时就是可直接安装/分发的包）
+- `quick-check`（push 到 `main`）：JDK 21 + sdkmanager，只跑 `:app:compileDebugKotlin`，20 分钟超时。
+- `pull-request-check`（PR / `workflow_dispatch`）：`test` → `assembleDebug` → `:app:lintDebug`，
+  不碰签名材料，也不产出 artifact。
+  注意：AGP 在这里只生成 debug 单测变体（release 开了 R8 优化，没有单测变体），
+  所以 `test` 就是全部；不要写 `:app:testReleaseUnitTest`，那个任务不存在。
+- `release`（tag）：`permissions: contents: write`，流程为
+  1. JDK 21（temurin，`cache: gradle`）+ sdkmanager 装 `platforms;android-37.0`、`build-tools;37.0.0`
+  2. `./gradlew test`
+  3. 解码签名密钥到 `$RUNNER_TEMP`（tag 构建四个 secret 缺一即失败，绝不发未签名包）
+  4. `./gradlew :app:assembleRelease :app:lintRelease --max-workers=2` —— `assembleRelease` 内含
+     `lintVitalRelease`，完整的 `lintRelease` 再给出可读报告；**不传** `-PlegacyReleaseSigning`
+  5. `apksigner verify --print-certs` 校验签名，签名缺失或换了 key 直接失败
+  6. 按 `version.properties` 的 `name` 重命名资产（`BETA 2` → `FrogReader-BETA-2.apk`）并生成
+     `SHA256SUMS.txt`，上传 artifact `FrogReader-release`
+  7. `gh release create|upload` 自动发布：标题 `Frog Reader <versionName>`，`alpha-*|beta-*` 标
+     `--prerelease`（`/releases/latest` 保持稳定版）
 
-**不要加回 `assembleDebug` / `lintDebug` / debug artifact**：fork 只分发签名 release 包，
-debug 版需要时本地 `./gradlew :app:assembleDebug` 即可，CI 上那是纯等待。
-若将来要「打 tag 自动发 GitHub Release」，在 job 里加 `permissions: contents: write` +
-`gh release create`（或 `softprops/action-gh-release`），资产仍是 APK + `SHA256SUMS.txt`。
+debug 版需要时本地 `./gradlew :app:assembleDebug` 即可；CI 里 debug 只做 PR 验证，不上传 artifact。
 
 ### 8.2 签名脚本（`scripts/release-signing.sh`）
 无参数运行一次即可：生成 PKCS12 keystore（RSA 4096 / 10000 天 / DN `CN=<appId>`）+ 本地
