@@ -13,6 +13,7 @@ import com.example.frogreader.data.DuplicateMatch
 import com.example.frogreader.data.FolderScanner
 import com.example.frogreader.data.ImportMode
 import com.example.frogreader.data.model.Book
+import com.example.frogreader.data.model.ShelfSortMode
 import com.example.frogreader.data.parser.mobi.MobiDrmException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.CancellationException
@@ -440,6 +441,11 @@ class LibraryViewModel(
     fun removeFromShelf(shelfId: String, bookIds: List<String>) {
         if (bookIds.isEmpty()) return
         viewModelScope.launch { runCatching { repository.removeFromShelf(shelfId, bookIds) } }
+    }
+
+    /** The shelf menu's sort choice; the panel re-reads the entry and reorders. */
+    fun setShelfSortMode(shelfId: String, mode: ShelfSortMode) {
+        viewModelScope.launch { runCatching { repository.setShelfSortMode(shelfId, mode) } }
     }
 
     fun renameShelf(shelfId: String, name: String) {

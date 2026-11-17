@@ -3,6 +3,7 @@ package com.example.frogreader.ui
 import com.example.frogreader.data.model.Book
 import com.example.frogreader.data.model.BookFormat
 import com.example.frogreader.data.model.Shelf
+import com.example.frogreader.data.model.ShelfSortMode
 import com.example.frogreader.data.model.sortTs
 import com.example.frogreader.ui.library.LibraryEntry
 import com.example.frogreader.ui.library.buildEntries
@@ -13,11 +14,12 @@ import org.junit.Test
 /** The grid stream: shelves take their target's slot, and no book ever vanishes. */
 class LibraryEntriesTest {
 
-    private fun book(id: String, addedAt: Long) = Book(
+    private fun book(id: String, addedAt: Long, sourceName: String? = null) = Book(
         id = id,
         title = "Title $id",
         format = BookFormat.EPUB,
         fileName = "$id.epub",
+        sourceName = sourceName,
         addedAtMillis = addedAt,
     )
 
@@ -116,5 +118,53 @@ class LibraryEntriesTest {
         assertEquals(9, seen.size)
         assertEquals(9, seen.toSet().size)
         assertTrue(seen.containsAll(books.map { it.id }))
+    }
+    @Test
+    fun testShelfKeepsItsOwnOrderUnlessTheShelfAsksForNames() {
+        // The stored order is a working order: the member opened last sits first.
+        val books = listOf(book("c", 300, "03 Third.epub"), book("a", 100, "01 First.epub"),
+            book("b", 200, "02 Second.epub"))
+        val shelf = Shelf(
+            id = "s1",
+            bookIds = listOf("c", "a", "b"),
+            createdAtMillis = 5,
+            sortMode = ShelfSortMode.RECENT,
+        )
+
+        val entry = buildEntries(books, listOf(shelf)).filterIsInstance<LibraryEntry.ShelfEntry>().single()
+
+        assertEquals(listOf("c", "a", "b"), entry.books.map { it.id })
+    }
+
+    @Test
+    fun testShelfCanBeOrderedByItsBooksFileNames() {
+        val books = listOf(book("c", 300, "10 Tenth.epub"), book("a", 100, "02 Second.epub"),
+            book("b", 200, "01 First.epub"))
+        val shelf = Shelf(
+            id = "s1",
+            bookIds = listOf("c", "a", "b"),
+            createdAtMillis = 5,
+            sortMode = ShelfSortMode.FILENAME,
+        )
+
+        val entry = buildEntries(books, listOf(shelf)).filterIsInstance<LibraryEntry.ShelfEntry>().single()
+
+        // 01 < 02 < 10 — numbers compare as numbers, not as text.
+        assertEquals(listOf("b", "a", "c"), entry.books.map { it.id })
+    }
+
+    @Test
+    fun testBooksWithoutAFileNameSortByNameTitle() {
+        val books = listOf(book("b", 200), book("a", 100))
+        val shelf = Shelf(
+            id = "s1",
+            bookIds = listOf("b", "a"),
+            createdAtMillis = 5,
+            sortMode = ShelfSortMode.FILENAME,
+        )
+
+        val entry = buildEntries(books, listOf(shelf)).filterIsInstance<LibraryEntry.ShelfEntry>().single()
+
+        assertEquals(listOf("a", "b"), entry.books.map { it.id })
     }
 }

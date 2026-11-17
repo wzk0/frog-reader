@@ -31,6 +31,8 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.LibraryAdd
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAdd
+import androidx.compose.material.icons.rounded.RadioButtonChecked
+import androidx.compose.material.icons.rounded.RadioButtonUnchecked
 import androidx.compose.material.icons.rounded.RemoveCircleOutline
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -51,6 +53,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.frogreader.R
+import com.example.frogreader.data.model.ShelfSortMode
 import com.example.frogreader.ui.reader.sheetMaxContentHeight
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
@@ -127,6 +130,9 @@ internal fun LibraryItemMenu(
     onEdit: () -> Unit,
     canEdit: Boolean = true,
     onRename: () -> Unit,
+    /** The shelf's current order, and what its two sort rows should set. */
+    shelfSortMode: ShelfSortMode = ShelfSortMode.RECENT,
+    onShelfSort: (ShelfSortMode) -> Unit = {},
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -201,6 +207,22 @@ internal fun LibraryItemMenu(
                     label = stringResource(R.string.shelf_menu_rename),
                     onClick = onRename,
                 )
+                // The order rows live in the shelf's own menu rather than in a
+                // separate control on the panel: it is a property of the shelf,
+                // and the ⋮ is where its properties already are.
+                ShelfSortMode.entries.forEach { mode ->
+                    FrogMenuItem(
+                        icon = if (mode == shelfSortMode) Icons.Rounded.RadioButtonChecked
+                        else Icons.Rounded.RadioButtonUnchecked,
+                        label = stringResource(
+                            when (mode) {
+                                ShelfSortMode.RECENT -> R.string.library_sort_recent
+                                ShelfSortMode.FILENAME -> R.string.library_sort_filename
+                            },
+                        ),
+                        onClick = { onShelfSort(mode) },
+                    )
+                }
             }
         }
         androidx.compose.material3.HorizontalDivider(

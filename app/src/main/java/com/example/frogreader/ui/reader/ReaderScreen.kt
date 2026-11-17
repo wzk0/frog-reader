@@ -2045,13 +2045,36 @@ private fun ScrollReader(
         snapshotFlow {
             listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
         }.collect { (index, offset) ->
-                displayedIndex.intValue = index.coerceAtMost(ready.items.size - 1)
-                viewModel.observeVisiblePosition(index.coerceAtMost(ready.items.size - 1), offset)
+                val visible = index.coerceAtMost(ready.items.size - 1)
+                displayedIndex.intValue = visible
+                viewModel.observeVisiblePosition(visible, offset)
+                // The anchor counts as shown when its item is on screen, even
+                // if a taller item above it owns the first-visible slot.
+                if (listState.layoutInfo.visibleItemsInfo.any { it.index == viewModel.openingFlatIndex }) {
+                    viewModel.onOpeningPositionPresented(viewModel.openingFlatIndex)
+                }
                 viewModel.observeCompletionPosition(
                     lastPage = index == ready.items.size - 1,
                     completion = index >= ready.items.size,
                 )
             }
+    }
+    // Programmatic scrolls do not report themselves here, so a true value means
+    // the user is reading: from then on their position replaces the anchor.
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress }
+            .collect { moving -> if (moving) viewModel.onUserMovedPosition() }
+    }
+    // A prefix that stopped short of the saved item could only clamp the first
+    // frame. Once the whole book is here, put the anchor back on screen — unless
+    // the user has already read somewhere of their own.
+    LaunchedEffect(ready.contentComplete, ready.items.size, listState) {
+        if (!ready.contentComplete || viewModel.openingSettled) return@LaunchedEffect
+        val anchor = viewModel.openingFlatIndex
+        if (anchor !in ready.items.indices) return@LaunchedEffect
+        val showing = listState.layoutInfo.visibleItemsInfo.any { it.index == anchor }
+        if (!showing) listState.scrollToItem(anchor, viewModel.openingScrollOffset)
+        viewModel.onOpeningPositionPresented(anchor)
     }
     // A single long fling can move several screens without using the TOC or
     // progress track. Offer the same safety net only after a genuinely large
@@ -2514,6 +2537,13 @@ private fun PagedReader(
                 viewportHeightPx = contentHeightPx,
             )
             val curlTouch = remember(pagerState) { PageCurlTouch() }
+            // A swipe or a tap on the page edge is the user reading; a layout
+            // that merely clamped is not. Only the former may move the stored
+            // position away from the opening anchor.
+            LaunchedEffect(pagerState, curlTouch) {
+                snapshotFlow { pagerState.isScrollInProgress || curlTouch.pressed }
+                    .collect { moving -> if (moving) viewModel.onUserMovedPosition() }
+            }
             LaunchedEffect(pagerState, curlTouch) {
                 snapshotFlow {
                     Triple(
@@ -2594,6 +2624,14 @@ private fun PagedReader(
                     }
                     // Turning back from the loading page cancels that turn.
                     pendingForwardTurn = null
+                    // The anchor is shown when the settled PAGE contains it:
+                    // after a font change the saved item can sit mid-page, and
+                    // waiting for an exact page start would never settle.
+                    val anchorIndex = viewModel.openingFlatIndex
+                    val pageEnd = pages.getOrNull(settled + 1)?.firstItemIndex ?: Int.MAX_VALUE
+                    if (pages[settled].firstItemIndex <= anchorIndex && anchorIndex < pageEnd) {
+                        viewModel.onOpeningPositionPresented(anchorIndex)
+                    }
                     if (current.partial) {
                         // Chapter-only pages: keep global progress untouched,
                         // just remember the exact reading position.
@@ -2604,7 +2642,19 @@ private fun PagedReader(
                     }
                     val flatIndex = pages[settled].firstItemIndex
                     displayedIndex.intValue = flatIndex
-                    viewModel.saveProgress(flatIndex, 0, pages[settled].firstCharOffset)
+                    // Page coordinates, not paragraph ones: the library card has
+                    // to read the same percentage and chapter remainder as the
+                    // page counter in this pager.
+                    viewModel.saveProgress(
+                        flatIndex,
+                        0,
+                        pages[settled].firstCharOffset,
+                        visiblePage = ReaderViewModel.VisiblePage(
+                            pageIndex = settled,
+                            pageCount = realPageCount,
+                            chapterLastPage = chapterLastPage.getOrElse(settled) { settled },
+                        ),
+                    )
                 }
             }
 

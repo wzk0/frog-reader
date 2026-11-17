@@ -31,6 +31,7 @@ import com.example.frogreader.data.model.Quote
 import com.example.frogreader.data.model.ReadingProgress
 import com.example.frogreader.data.model.ReadingStatus
 import com.example.frogreader.data.model.Shelf
+import com.example.frogreader.data.model.ShelfSortMode
 import com.example.frogreader.data.model.Timestamped
 import com.example.frogreader.data.model.previewText
 import com.example.frogreader.data.model.UserBookData
@@ -1989,6 +1990,11 @@ open class BookRepository(private val context: Context? = null) {
         )
         updateShelves { shelves -> shelves + shelf }
         return _shelves.value.firstOrNull { it.id == shelf.id } ?: shelf
+    }
+
+    /** How this shelf orders the books inside it; the shelf menu's sort choice. */
+    open suspend fun setShelfSortMode(shelfId: String, mode: ShelfSortMode): Unit = updateShelves { shelves ->
+        shelves.map { if (it.id == shelfId) it.copy(sortMode = mode) else it }
     }
 
     open suspend fun renameShelf(id: String, name: String): Unit = updateShelves { shelves ->

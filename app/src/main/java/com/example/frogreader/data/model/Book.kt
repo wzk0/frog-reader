@@ -17,6 +17,15 @@ data class ReadingProgress(
     val chapterIndex: Int = 0,
     val elementIndex: Int = 0,
     val scrollOffset: Int = 0,
+    /**
+     * Character inside [elementIndex] the page started at.
+     *
+     * Element granularity alone is not enough to reopen a paginated book: most
+     * pages begin mid-paragraph, so a saved page start of "(item 180, any
+     * character)" matched the page BEFORE it on the next open, and each reopen
+     * drifted one page further back. Defaulted for stores written before this.
+     */
+    val charOffset: Int = 0,
     val fraction: Float = 0f,
     /**
      * Pages left in the current chapter at the last save, for the library's
@@ -228,6 +237,16 @@ data class Book(
     val sortFolder: String get() = sourceFolder?.trim().orEmpty()
 }
 
+/** How the books inside one shelf are ordered. */
+@Serializable
+enum class ShelfSortMode {
+    /** The order the shelf keeps: newest addition first, opened member to the front. */
+    RECENT,
+
+    /** By the name the book has in the user's own folder, A→Z. */
+    FILENAME,
+}
+
 /**
  * A named group of books that lives in the same grid as the books themselves.
  * A book belongs to at most one shelf, and shelves never nest.
@@ -243,6 +262,11 @@ data class Shelf(
      */
     val bookIds: List<String> = emptyList(),
     val createdAtMillis: Long,
+    /**
+     * This shelf's own reading order. Defaulted: shelves written before this
+     * existed keep their historical order (they are [ShelfSortMode.RECENT]).
+     */
+    val sortMode: ShelfSortMode = ShelfSortMode.RECENT,
     /**
      * Ordering timestamp in the same space as a book's
      * `lastOpenedAtMillis ?: addedAtMillis`, seeded from the drop target so a

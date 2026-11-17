@@ -121,6 +121,7 @@ import com.example.frogreader.ui.components.FrogSegmentedControl
 import com.example.frogreader.data.LibraryViewMode
 import com.example.frogreader.data.LibrarySortMode
 import com.example.frogreader.data.model.Book
+import com.example.frogreader.data.model.ShelfSortMode
 import com.example.frogreader.ui.theme.LocalFrogColors
 import kotlin.math.roundToInt
 import androidx.compose.ui.res.pluralStringResource
@@ -893,8 +894,22 @@ fun LibraryScreen(
                             height = with(density) { anchor.height.toDp() },
                         ),
                 ) {
+                    val menuShelf = (target as? MenuTarget.ShelfTarget)?.shelfId?.let { id ->
+                        entries.filterIsInstance<LibraryEntry.ShelfEntry>()
+                            .firstOrNull { it.shelf.id == id }?.shelf
+                    }
                     LibraryItemMenu(
                         target = target,
+                        shelfSortMode = menuShelf?.sortMode ?: ShelfSortMode.RECENT,
+                        onShelfSort = { mode ->
+                            menuShelf?.let { shelf ->
+                                if (shelf.sortMode != mode) {
+                                    haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
+                                    viewModel.setShelfSortMode(shelf.id, mode)
+                                }
+                            }
+                            menuRequest = null
+                        },
                         isInReadingQueue = target is MenuTarget.BookTarget &&
                             readingQueue.any { it.attachment?.id == target.bookId },
                         canEdit = (target as? MenuTarget.BookTarget)?.bookId?.let(bookOf)?.format?.supportsMetadataEditing == true,

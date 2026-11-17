@@ -2,6 +2,7 @@ package com.example.frogreader.ui.library
 
 import com.example.frogreader.data.model.Book
 import com.example.frogreader.data.model.Shelf
+import com.example.frogreader.data.model.ShelfSortMode
 import com.example.frogreader.data.model.bookOrderKey
 import com.example.frogreader.data.model.shelfOrderKey
 import com.example.frogreader.data.model.sortTs
@@ -33,6 +34,25 @@ sealed interface LibraryEntry {
 }
 
 /**
+ * The shelf's books in the order its own menu asks for.
+ *
+ * [ShelfSortMode.RECENT] keeps the stored order untouched: that list is not
+ * insertion order but a working order — the member last opened sits first, and
+ * the repository rotates it on every open. Sorting it by name would throw that
+ * away, which is why the menu offers the choice instead of deciding for it.
+ */
+internal fun List<Book>.inShelfOrder(mode: ShelfSortMode): List<Book> = when (mode) {
+    ShelfSortMode.RECENT -> this
+    ShelfSortMode.FILENAME -> sortedWith(ShelfFileNameOrder)
+}
+
+/** Natural order over the name in the user's folder, then id for stability. */
+private val ShelfFileNameOrder = Comparator<Book> { a, b ->
+    val byName = NaturalOrder.compare(a.sortName, b.sortName)
+    if (byName != 0) byName else a.id.compareTo(b.id)
+}
+
+/**
  * Merges books and shelves into the grid order. Defensive by design: a member
  * id that no longer resolves is dropped rather than faked, so a torn read
  * (books updated, shelves not yet) can never hide a book.
@@ -51,7 +71,9 @@ internal fun buildEntries(books: List<Book>, shelves: List<Shelf>): List<Library
     val shelfEntries = ArrayList<LibraryEntry>(shelves.size)
 
     for (shelf in shelves) {
-        val members = shelf.bookIds.mapNotNull { byId[it] }.filter { it.id !in shelved }
+        val members = shelf.bookIds.mapNotNull { byId[it] }
+            .filter { it.id !in shelved }
+            .inShelfOrder(shelf.sortMode)
         members.forEach { shelved += it.id }
         shelfEntries += LibraryEntry.ShelfEntry(shelf, members)
     }

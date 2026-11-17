@@ -124,6 +124,19 @@ sealed interface ReaderState {
     }
 }
 
+/**
+ * The card's numbers, derived from the page the pager is on rather than from the
+ * element index: element positions made the tile disagree with the counter.
+ *
+ * Returns the book fraction (0..1) and the pages left in the current chapter.
+ */
+internal fun savedPageProgress(pageIndex: Int, pageCount: Int, chapterLastPage: Int): Pair<Float, Int> {
+    val fraction = if (pageCount <= 1) 0f
+    else (pageIndex.toFloat() / (pageCount - 1)).coerceIn(0f, 1f)
+    val left = (chapterLastPage - pageIndex).coerceAtLeast(0)
+    return fraction to left
+}
+
 class ReaderViewModel(
     private val repository: BookRepository,
     private val settingsRepository: SettingsRepository,
@@ -216,6 +229,36 @@ class ReaderViewModel(
     var currentScrollOffset: Int = 0
         private set
 
+    /**
+     * The position this session was opened at.
+     *
+     * Partial layouts — a parsed prefix, a cached prefix, a one-chapter quick
+     * pagination — cannot always reach the saved index and clamp instead. Until
+     * the reader has shown the anchor (or the user has moved), nothing else may
+     * be written over the stored position: see [ReaderOpeningPosition].
+     */
+    private var openingPosition: ReaderOpeningPosition? = null
+
+    /** The flat index this session opened at, for the reader to re-anchor to. */
+    val openingFlatIndex: Int get() = openingPosition?.index ?: 0
+
+    /** True once the anchor has been shown or the user has read elsewhere. */
+    val openingSettled: Boolean get() = openingPosition?.isSettled ?: true
+
+    val openingScrollOffset: Int get() = openingPosition?.scrollOffset ?: 0
+
+    private fun contentIsComplete(): Boolean = (_state.value as? ReaderState.Ready)?.contentComplete ?: true
+
+    /** The reader is showing the opening anchor; writes may follow it. */
+    fun onOpeningPositionPresented(flatIndex: Int) {
+        openingPosition?.presented(flatIndex)
+    }
+
+    /** The user scrolled or turned a page: their position wins from now on. */
+    fun onUserMovedPosition() {
+        openingPosition?.userMoved()
+    }
+
     private val navigationSession = ReaderNavigationSession(
         viewModelScope, android.os.SystemClock::elapsedRealtime,
     )
@@ -240,6 +283,10 @@ class ReaderViewModel(
     /** Updates the exact transient position without scheduling a disk write. */
     fun observeVisiblePosition(flatIndex: Int, scrollOffset: Int, charOffset: Int = 0) {
         if (_restartingReading.value) return
+        // While only a prefix is on screen the list can clamp, and a clamped
+        // frame is never behind the saved position — anything ahead of it is a
+        // place the reader actually reached, so only those may overwrite it.
+        if (!contentIsComplete() && openingPosition?.accepts(flatIndex) == false) return
         currentFlatIndex = flatIndex
         currentScrollOffset = scrollOffset
         currentCharOffset = charOffset
@@ -399,6 +446,14 @@ class ReaderViewModel(
             }
             currentFlatIndex = book.progress.elementIndex
             currentScrollOffset = book.progress.scrollOffset
+            // The exact character the page began at: without it a page that
+            // started mid-paragraph resolved to the page before it.
+            currentCharOffset = book.progress.charOffset
+            openingPosition = ReaderOpeningPosition(
+                index = book.progress.elementIndex,
+                scrollOffset = book.progress.scrollOffset,
+                charOffset = book.progress.charOffset,
+            )
             currentReadingLogId = book.activeReadingLogId
             initializeCompletionReview(book)
             viewingPreviousReading = book.hasFinishedReading || book.status == ReadingStatus.ABANDONED
@@ -691,25 +746,60 @@ class ReaderViewModel(
         }
     }
 
-    fun saveProgress(firstVisibleIndex: Int, scrollOffset: Int, charOffset: Int = 0) {
+    /**
+     * Where the paged reader is in the current pagination, in the same terms
+     * its own counter shows: page [pageIndex] of [pageCount], and the last page
+     * of the current chapter.
+     *
+     * Saved as-is so the library card agrees with what the reader sees. Element
+     * positions alone made the two disagree: the pager measured pages while the
+     * library measured paragraphs, and a 400-page book could read 31% inside and
+     * 27% on its tile.
+     */
+    data class VisiblePage(val pageIndex: Int, val pageCount: Int, val chapterLastPage: Int)
+
+    fun saveProgress(
+        firstVisibleIndex: Int,
+        scrollOffset: Int,
+        charOffset: Int = 0,
+        visiblePage: VisiblePage? = null,
+    ) {
         // The old reader can still emit a frame while a new reading is being saved.
         // Do not let that frame overwrite the reset position or the undecided one.
         if (_offerReread.value || _restartingReading.value) return
         val ready = _state.value as? ReaderState.Ready ?: return
+        // Nothing may overwrite the saved position while only a prefix exists:
+        // a preview that stopped short, or a pager still on its quick pass, would
+        // otherwise replace "page 180" with "page 1" — permanently. Once the
+        // whole book is here every layout is real again, so writes resume.
+        val anchor = openingPosition
+        if (!ready.contentComplete && anchor != null) {
+            if (!anchor.accepts(firstVisibleIndex)) return
+            if (firstVisibleIndex == anchor.index) anchor.presented(firstVisibleIndex)
+        }
         observeVisiblePosition(firstVisibleIndex, scrollOffset, charOffset)
-        val fraction = if (!ready.contentComplete) {
-            this.book.value?.progress?.fraction ?: ready.book.progress.fraction
-        } else if (ready.items.size <= 1) {
-            0f
-        } else {
-            (firstVisibleIndex.toFloat() / (ready.items.size - 1)).coerceIn(0f, 1f)
+        val fraction = when {
+            // A prefix knows only where it starts, not how far in it is.
+            !ready.contentComplete -> this.book.value?.progress?.fraction ?: ready.book.progress.fraction
+            // Paged reading: the same fraction the reader's own slider shows.
+            visiblePage != null && visiblePage.pageCount > 1 ->
+                savedPageProgress(visiblePage.pageIndex, visiblePage.pageCount, visiblePage.chapterLastPage).first
+
+            ready.items.size <= 1 -> 0f
+            else -> (firstVisibleIndex.toFloat() / (ready.items.size - 1)).coerceIn(0f, 1f)
         }
         val chapter = ready.chapterAt(firstVisibleIndex)
-        val pageCounts = pageCountsFor(ready, chapter, firstVisibleIndex)
+        val pageCounts = if (visiblePage != null) {
+            savedPageProgress(visiblePage.pageIndex, visiblePage.pageCount, visiblePage.chapterLastPage).second to
+                visiblePage.pageCount
+        } else {
+            pageCountsFor(ready, chapter, firstVisibleIndex)
+        }
         val progress = ReadingProgress(
             chapterIndex = chapter,
             elementIndex = firstVisibleIndex,
             scrollOffset = scrollOffset,
+            charOffset = charOffset,
             fraction = fraction,
             pagesLeftInChapter = pageCounts.first,
             totalPages = pageCounts.second,
@@ -806,6 +896,8 @@ class ReaderViewModel(
                         currentFlatIndex = 0
                         currentCharOffset = 0
                         currentScrollOffset = 0
+                        // A fresh reading starts at the top on purpose.
+                        openingPosition = ReaderOpeningPosition(0)
                     }
                     clearNavigationHistory()
                     readingSession.reset()
