@@ -219,10 +219,12 @@ jobs:
             alpha-*|beta-*) prerelease=(--prerelease) ;;
           esac
 
+          # `gh release edit` has no --generate-notes flag (only create has),
+          # and this project keeps a hand-written body per release, so an
+          # existing release only gets its assets and title refreshed.
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/*.apk dist/SHA256SUMS.txt --clobber
-            gh release edit "$TAG" --title "$RELEASE_TITLE" \
-              "${prerelease[@]}" --generate-notes
+            gh release edit "$TAG" --title "$RELEASE_TITLE" "${prerelease[@]}"
           else
             gh release create "$TAG" dist/*.apk dist/SHA256SUMS.txt \
               --title "$RELEASE_TITLE" --verify-tag \
