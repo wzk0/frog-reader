@@ -219,14 +219,35 @@ jobs:
             alpha-*|beta-*) prerelease=(--prerelease) ;;
           esac
 
+          # Release bodies are hand-written: docs/releases/BETA_2.md for
+          # version "BETA 2", or docs/releases/<tag>.md when it matches.
+          version_file=$(sed -n 's/^name=//p' version.properties | tr ' ' '_')
+          notes_file=""
+          for candidate in "docs/releases/$TAG.md" "docs/releases/$version_file.md"; do
+            if [ -f "$candidate" ]; then
+              notes_file=$candidate
+              break
+            fi
+          done
+
+          if [ -n "$notes_file" ]; then
+            echo "Using release notes from $notes_file"
+            create_notes=(--notes-file "$notes_file")
+            edit_notes=("${create_notes[@]}")
+          else
+            create_notes=(--generate-notes)
+            edit_notes=()
+          fi
+
           # `gh release edit` has no --generate-notes flag (only create has),
-          # and this project keeps a hand-written body per release, so an
-          # existing release only gets its assets and title refreshed.
+          # so an update leaves the existing body untouched unless we have a
+          # notes file to write.
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" dist/*.apk dist/SHA256SUMS.txt --clobber
-            gh release edit "$TAG" --title "$RELEASE_TITLE" "${prerelease[@]}"
+            gh release edit "$TAG" --title "$RELEASE_TITLE" \
+              "${prerelease[@]}" "${edit_notes[@]}"
           else
             gh release create "$TAG" dist/*.apk dist/SHA256SUMS.txt \
               --title "$RELEASE_TITLE" --verify-tag \
-              "${prerelease[@]}" --generate-notes
+              "${prerelease[@]}" "${create_notes[@]}"
           fi
