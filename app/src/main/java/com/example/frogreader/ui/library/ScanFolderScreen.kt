@@ -1,5 +1,9 @@
 package com.example.frogreader.ui.library
 
+import androidx.compose.runtime.getValue
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.connectedCard
+import com.example.frogreader.ui.components.ConnectedCardGap
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -24,7 +28,7 @@ import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.selection.toggleable
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoStories
@@ -43,7 +47,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -329,10 +332,12 @@ fun ScanFolderScreen(
                                 end = 16.dp,
                                 bottom = 16.dp,
                             ),
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(ConnectedCardGap),
                         ) {
-                            items(visible, key = { it.id }) { row ->
+                            itemsIndexed(visible, key = { _, item -> item.id }) { index, row ->
                                 ScanRowCard(
+                                    modifier = Modifier.animateItem(),
+                                    shape = connectedCardShape(index, visible.size),
                                     row = row,
                                     enabled = importing == null,
                                     onToggle = {
@@ -521,6 +526,8 @@ private fun ScanRowCard(
     row: ScanRow,
     enabled: Boolean,
     onToggle: () -> Unit,
+    modifier: Modifier,
+    shape: RoundedCornerShape,
     onRetry: () -> Unit,
 ) {
     val frog = LocalFrogColors.current
@@ -528,10 +535,10 @@ private fun ScanRowCard(
     val failed = row.state == ScanRowState.FAILED
 
     Box(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(if (row.selected) frog.folder else scheme.surfaceContainer)
+            .connectedCard(scheme, shape)
+            .then(if (row.selected) Modifier.background(scheme.secondaryContainer) else Modifier)
             .clickable(enabled = enabled && row.selectable, onClick = onToggle),
     ) {
         Row(

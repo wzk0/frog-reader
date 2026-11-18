@@ -58,6 +58,13 @@ data class ReaderColors(
         quoteHighlights[color] ?: quoteInk(color).copy(alpha = quoteHighlight.alpha)
 }
 
+/** Settings use the same surface roles as the app's other controls. */
+internal fun ReaderColors.forSettings(scheme: ColorScheme): ReaderColors = copy(
+    control = scheme.surfaceContainer,
+    controlStrong = scheme.surfaceContainerHigh,
+    controlButton = scheme.surfaceContainerLowest,
+)
+
 /** Material You accents can be much brighter than our fixed inks. */
 private fun readableHighlight(ink: Color, opacity: Float, background: Color, text: Color): Color {
     fun readable(alpha: Float): Boolean {

@@ -1,5 +1,11 @@
 package com.example.frogreader.ui.library
 
+import com.example.frogreader.ui.theme.floatingContentSurface
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.connectedCard
+import com.example.frogreader.ui.components.ConnectedCardGap
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import com.example.frogreader.ui.theme.floatingSurface
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -55,13 +61,11 @@ import androidx.compose.ui.unit.sp
 import com.example.frogreader.R
 import com.example.frogreader.data.model.ShelfSortMode
 import com.example.frogreader.ui.reader.sheetMaxContentHeight
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.DropdownMenu
+import com.example.frogreader.ui.components.FlatDropdownMenu as DropdownMenu
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.geometry.Rect
 
@@ -131,13 +135,11 @@ internal fun LibraryItemMenu(
     canEdit: Boolean = true,
     onRename: () -> Unit,
     /** The shelf's current order, and what its two sort rows should set. */
-    shelfSortMode: ShelfSortMode = ShelfSortMode.RECENT,
+    shelfSortMode: ShelfSortMode = ShelfSortMode.FOLLOW_LIBRARY,
     onShelfSort: (ShelfSortMode) -> Unit = {},
     onDelete: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val scheme = MaterialTheme.colorScheme
-
     // Opened on the frame AFTER the anchor appears, so the menu plays its
     // scale-in instead of being born already expanded.
     var expanded by remember { mutableStateOf(false) }
@@ -146,10 +148,6 @@ internal fun LibraryItemMenu(
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(24.dp),
-        containerColor = scheme.floatingSurface,
-        tonalElevation = 0.dp,
-        modifier = Modifier.width(216.dp),
     ) {
         FrogMenuItem(
             icon = Icons.Rounded.CheckCircle,
@@ -216,8 +214,10 @@ internal fun LibraryItemMenu(
                         else Icons.Rounded.RadioButtonUnchecked,
                         label = stringResource(
                             when (mode) {
+                                ShelfSortMode.FOLLOW_LIBRARY -> R.string.shelf_sort_follow_library
                                 ShelfSortMode.RECENT -> R.string.library_sort_recent
                                 ShelfSortMode.FILENAME -> R.string.library_sort_filename
+                                ShelfSortMode.FOLDER -> R.string.library_sort_folder
                             },
                         ),
                         onClick = { onShelfSort(mode) },
@@ -225,11 +225,6 @@ internal fun LibraryItemMenu(
                 }
             }
         }
-        androidx.compose.material3.HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            thickness = 1.dp,
-            color = scheme.outlineVariant.copy(alpha = 0.5f),
-        )
         FrogMenuItem(
             icon = Icons.Rounded.Delete,
             label = when (target) {
@@ -242,9 +237,8 @@ internal fun LibraryItemMenu(
     }
 }
 
-/** One row of a Frog dropdown: uppercase, wide-tracked, 20dp leading icon. */
 @Composable
-internal fun FrogMenuItem(
+private fun FrogMenuItem(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,
@@ -255,21 +249,9 @@ internal fun FrogMenuItem(
     val tint = if (destructive) scheme.error else scheme.onSurfaceVariant
 
     DropdownMenuItem(
-        text = {
-            Text(
-                text = label.uppercase(),
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 1.sp,
-                color = text,
-            )
-        },
-        leadingIcon = {
-            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
-        },
+        text = { Text(label, color = text) },
+        leadingIcon = { Icon(icon, contentDescription = null, tint = tint) },
         onClick = onClick,
-        contentPadding = PaddingValues(horizontal = 18.dp),
     )
 }
 
@@ -289,27 +271,26 @@ internal fun AddToShelfSheet(
     onPick: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val targets = shelves.filterNot { it.shelf.id == exceptShelfId }
     FrogActionSheet(title = stringResource(R.string.shelf_add_title), onDismiss = onDismiss) {
         SheetRow(
             icon = Icons.Rounded.Add,
+            shape = connectedCardShape(last = targets.isEmpty()),
             label = stringResource(R.string.shelf_add_new),
             secondary = stringResource(R.string.shelf_add_new_hint),
             accent = true,
             onClick = onNewShelf,
         )
-        shelves
-            .filterNot { it.shelf.id == exceptShelfId }
-            .forEach { entry ->
-                // entry.books, not shelf.bookIds: the stored list can still name
-                // a book that no longer resolves, and the count should not.
-                val count = entry.books.size
-                SheetRow(
-                    icon = Icons.Rounded.FolderOpen,
-                    label = shelfName(entry),
-                    secondary = pluralStringResource(R.plurals.shelf_books_count, count, count),
-                    onClick = { onPick(entry.shelf.id) },
-                )
-            }
+        targets.forEachIndexed { index, entry ->
+            val count = entry.books.size
+            SheetRow(
+                icon = Icons.Rounded.FolderOpen,
+                shape = connectedCardShape(first = false, last = index == targets.lastIndex),
+                label = shelfName(entry),
+                secondary = pluralStringResource(R.plurals.shelf_books_count, count, count),
+                onClick = { onPick(entry.shelf.id) },
+            )
+        }
     }
 }
 
@@ -328,12 +309,14 @@ internal fun DeleteShelfSheet(
     FrogActionSheet(title = stringResource(R.string.shelf_delete_title), onDismiss = onDismiss) {
         SheetRow(
             icon = Icons.Rounded.FolderOpen,
+            shape = connectedCardShape(last = false),
             label = stringResource(R.string.shelf_delete_remove_shelf),
             secondary = stringResource(R.string.shelf_delete_remove_shelf_hint),
             onClick = onRemoveShelf,
         )
         SheetRow(
             icon = Icons.Rounded.DeleteForever,
+            shape = connectedCardShape(first = false),
             label = stringResource(R.string.shelf_delete_books),
             secondary = stringResource(R.string.shelf_delete_books_hint),
             destructive = true,
@@ -396,7 +379,7 @@ private fun FrogActionSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        containerColor = MaterialTheme.colorScheme.floatingSurface,
         dragHandle = {
             Box(
                 modifier = Modifier
@@ -451,7 +434,7 @@ private fun FrogActionSheet(
             }
 
             Spacer(Modifier.height(12.dp))
-            content()
+            Column(verticalArrangement = Arrangement.spacedBy(ConnectedCardGap)) { content() }
         }
     }
 }
@@ -464,6 +447,7 @@ private fun SheetRow(
     secondary: String? = null,
     destructive: Boolean = false,
     accent: Boolean = false,
+    shape: RoundedCornerShape = connectedCardShape(),
 ) {
     val scheme = MaterialTheme.colorScheme
     val haptics = LocalHapticFeedback.current
@@ -476,7 +460,7 @@ private fun SheetRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .connectedCard(scheme.floatingContentSurface, shape)
             .clickable {
                 haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
                 onClick()

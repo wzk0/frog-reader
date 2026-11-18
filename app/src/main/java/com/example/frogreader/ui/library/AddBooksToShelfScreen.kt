@@ -1,5 +1,10 @@
 package com.example.frogreader.ui.library
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.connectedCard
+import com.example.frogreader.ui.components.ConnectedCardGap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,18 +25,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsIgnoringVisibility
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -183,10 +186,12 @@ internal fun AddBooksToShelfScreen(
                         top = 14.dp,
                         bottom = 14.dp,
                     ),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(ConnectedCardGap),
                 ) {
-                    items(shown, key = { it.id }) { book ->
+                    itemsIndexed(shown, key = { _, item -> item.id }) { index, book ->
                         CandidateRow(
+                            modifier = Modifier.animateItem(),
+                            shape = connectedCardShape(index, shown.size),
                             book = book,
                             coverFile = coverOf(book),
                             inShelf = shelfNameOf(book),
@@ -238,15 +243,17 @@ private fun CandidateRow(
     inShelf: String?,
     selected: Boolean,
     onToggle: () -> Unit,
+    modifier: Modifier,
+    shape: RoundedCornerShape,
 ) {
     val scheme = MaterialTheme.colorScheme
     val frog = LocalFrogColors.current
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(if (selected) frog.folder else scheme.surfaceContainer)
+            .connectedCard(scheme, shape)
+            .then(if (selected) Modifier.background(scheme.secondaryContainer) else Modifier)
             .clickable(onClick = onToggle)
             .padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,

@@ -1,5 +1,11 @@
 package com.example.frogreader.ui.translation
 
+import com.example.frogreader.ui.theme.floatingContentSurface
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.connectedCard
+import com.example.frogreader.ui.components.ConnectedCardGap
 import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
@@ -17,7 +23,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.AlertDialog
@@ -29,12 +35,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -192,6 +196,8 @@ internal fun ExternalTextAppPickerContent(
                 item(key = EXTERNAL_TEXT_ASK_EVERY_TIME) {
                     ExternalTextChoiceRow(
                         label = stringResource(R.string.external_text_ask_every_time),
+                        modifier = Modifier.padding(bottom = if (apps.isEmpty()) 0.dp else 12.dp)
+                            .connectedCard(MaterialTheme.colorScheme.floatingContentSurface, connectedCardShape()),
                         selected = selected == EXTERNAL_TEXT_ASK_EVERY_TIME,
                         onClick = onAskEveryTime,
                     )
@@ -202,10 +208,12 @@ internal fun ExternalTextAppPickerContent(
                     Text(stringResource(action.emptyRes), Modifier.padding(vertical = 12.dp))
                 }
             } else {
-                items(apps, key = { it.id }) { app ->
+                itemsIndexed(apps, key = { _, app -> app.id }) { index, app ->
                     val selectedApp = resolveExternalTextApp(listOf(app), selected)
                     ExternalTextChoiceRow(
                         label = app.label,
+                        modifier = Modifier.animateItem().padding(bottom = ConnectedCardGap)
+                            .connectedCard(MaterialTheme.colorScheme.floatingContentSurface, connectedCardShape(index, apps.size)),
                         actionLabel = app.actionLabel.takeIf { it != app.label },
                         selected = selectedApp != null,
                         onClick = { onChoose(selectedApp ?: app) },
@@ -222,14 +230,15 @@ private fun ExternalTextChoiceRow(
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
+    modifier: Modifier = Modifier.connectedCard(MaterialTheme.colorScheme.floatingContentSurface, connectedCardShape()),
     actionLabel: String? = null,
     icon: (@Composable () -> Unit)? = null,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .heightIn(min = 48.dp)
-            .padding(vertical = 8.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {

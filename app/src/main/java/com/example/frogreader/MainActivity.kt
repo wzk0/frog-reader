@@ -1,5 +1,17 @@
 package com.example.frogreader
 
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.AnimatedVisibility
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.cardSurface
+import com.example.frogreader.ui.components.ConnectedCardGap
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import com.example.frogreader.ui.theme.floatingSurface
 import android.app.Activity
 import android.content.Context
@@ -41,34 +53,29 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoStories
@@ -78,7 +85,6 @@ import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.outlined.PersonOutline
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -91,11 +97,9 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -103,34 +107,19 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
-import androidx.compose.ui.semantics.traversalIndex
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import com.example.frogreader.ui.theme.LocalFrogColors
-import com.example.frogreader.ui.components.rememberPagerPillInteraction
-import java.util.Locale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.hapticfeedback.HapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.core.graphics.drawable.toDrawable
 import androidx.activity.compose.LocalActivity
 import androidx.core.view.WindowCompat
@@ -180,8 +169,6 @@ import com.example.frogreader.ui.nav.SettingsRoute
 import com.example.frogreader.ui.nav.ProfileRoute
 import com.example.frogreader.ui.nav.QuotesAndBookmarksRoute
 import com.example.frogreader.ui.nav.FrogAddFab
-import com.example.frogreader.ui.nav.FrogDockContentPadding
-import com.example.frogreader.ui.nav.FrogDockMinHeight
 import com.example.frogreader.ui.nav.ReadingQueueFabState
 import com.example.frogreader.ui.profile.ReadingQueueScreen
 import com.example.frogreader.ui.nav.ReadingQueueRoute
@@ -199,7 +186,6 @@ import com.example.frogreader.ui.nav.TrackerRoute
 import com.example.frogreader.ui.reader.ReaderScreen
 import com.example.frogreader.ui.settings.SettingsScreen
 import com.example.frogreader.ui.profile.ProfileScreen
-import com.example.frogreader.ui.profile.ProfileSectionScreen
 import com.example.frogreader.ui.stats.StatsScreen
 import com.example.frogreader.ui.theme.FrogReaderTheme
 import com.example.frogreader.ui.theme.colorSchemeFor
@@ -709,10 +695,9 @@ class MainActivity : ComponentActivity() {
         // back behavior and library dock lifecycle. A cancelled drag changes none
         // of these. Read continuous progress only inside the navigation visuals.
         val selectedTab = if (pagerState.settledPage == 1) NavTab.PROFILE else NavTab.LIBRARY
+        val requestedPage by tabSwitch.requestedPage.collectAsStateWithLifecycle()
+        val navigationTab = if ((requestedPage ?: pagerState.currentPage) == 1) NavTab.PROFILE else NavTab.LIBRARY
         val onLibrary = selectedTab == NavTab.LIBRARY
-        val tabProgress: () -> Float = remember(pagerState) {
-            { (pagerState.currentPage + pagerState.currentPageOffsetFraction).coerceIn(0f, 1f) }
-        }
         val backReturnsToLibrary by remember(pagerState) {
             derivedStateOf { pagerState.settledPage != 0 || pagerState.isScrollInProgress }
         }
@@ -801,9 +786,8 @@ class MainActivity : ComponentActivity() {
             readingQueueFab = readingQueueFab?.takeIf { it.first == backStackEntry?.id }?.second,
             navigationVisible = onTopLevel,
             dockVisible = !onLibrary || libraryDockVisible,
-            selectedTab = selectedTab,
+            selectedTab = navigationTab,
             onTabSelected = onTabSelected,
-            tabProgress = tabProgress,
             importVisible = onTopLevel,
             importing = isImportingBook,
             importExpanded = fabMenuExpanded,
@@ -1201,6 +1185,9 @@ private const val ShowBottomBar = true
 private val ImportButtonGap = 12.dp
 private val LibraryDockMaxWidth = 400.dp
 private val DockSidePadding = 20.dp
+private val DockControlHeight = 56.dp
+private val DockVerticalPadding = 12.dp
+private val DockBarHeight = DockControlHeight + DockVerticalPadding * 2
 
 // ------------------------------------------------------------------ chrome
 
@@ -1212,7 +1199,6 @@ internal fun FrogMainScaffold(
     dockVisible: Boolean = true,
     selectedTab: NavTab,
     onTabSelected: (NavTab) -> Unit,
-    tabProgress: () -> Float = { if (selectedTab == NavTab.PROFILE) 1f else 0f },
     importVisible: Boolean,
     importing: Boolean,
     importExpanded: Boolean,
@@ -1225,8 +1211,7 @@ internal fun FrogMainScaffold(
     readingQueueFab: ReadingQueueFabState? = null,
     content: @Composable (PaddingValues) -> Unit,
 ) {
-    var dockHeight by remember { mutableStateOf(FrogDockMinHeight) }
-    val fabSize = dockHeight - FrogDockContentPadding * 2
+    val fabSize = DockControlHeight
     val controlsVisible = (navigationVisible && dockVisible) || importExpanded
     val hidden by animateFloatAsState(
         targetValue = if (controlsVisible) 0f else 1f,
@@ -1251,7 +1236,7 @@ internal fun FrogMainScaffold(
                     Spacer(Modifier.fillMaxWidth()
                         .windowInsetsPadding(WindowInsets.systemBarsIgnoringVisibility
                             .only(WindowInsetsSides.Bottom))
-                        .height(dockHeight + 16.dp))
+                        .height(DockBarHeight))
                 }
             },
             content = content,
@@ -1271,10 +1256,8 @@ internal fun FrogMainScaffold(
                     visible = controlsVisible && !importExpanded,
                     selectedTab = selectedTab,
                     onTabSelected = onTabSelected,
-                    tabProgress = tabProgress,
-                    reserveImportSpace = true,
+                    reserveImportSpace = importVisible,
                     importButtonSize = fabSize,
-                    onDockHeightChanged = { dockHeight = it },
                 )
             }
         }
@@ -1283,8 +1266,7 @@ internal fun FrogMainScaffold(
                     .graphicsLayer { translationY = size.height * fabHidden }
                     .windowInsetsPadding(WindowInsets.systemBarsIgnoringVisibility
                         .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-                    .padding(horizontal = DockSidePadding, vertical = 8.dp)
-                    .padding(bottom = FrogDockContentPadding)
+                    .padding(horizontal = DockSidePadding, vertical = DockVerticalPadding)
                     .widthIn(max = LibraryDockMaxWidth).fillMaxWidth(),
                 contentAlignment = Alignment.BottomEnd,
             ) {
@@ -1305,104 +1287,54 @@ internal fun FrogMainScaffold(
     }
 }
 
-/** The floating two-tab card; its parent owns dock movement and content clearance. */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun FrogNavigationBar(
+private fun FrogNavigationBar(
     visible: Boolean,
     selectedTab: NavTab,
     onTabSelected: (NavTab) -> Unit,
-    tabProgress: () -> Float = { if (selectedTab == NavTab.PROFILE) 1f else 0f },
-    reserveImportSpace: Boolean = false,
-    importButtonSize: Dp = FrogDockMinHeight - FrogDockContentPadding * 2,
-    onDockHeightChanged: (Dp) -> Unit = {},
+    reserveImportSpace: Boolean,
+    importButtonSize: Dp,
 ) {
-    val scheme = MaterialTheme.colorScheme
-    val density = LocalDensity.current
-    val pillInteraction = rememberPagerPillInteraction(
-        selectedIndex = if (selectedTab == NavTab.PROFILE) 1 else 0,
-        pagerProgress = tabProgress,
-        enabled = visible,
-        onSelect = { onTabSelected(if (it == 1) NavTab.PROFILE else NavTab.LIBRARY) },
-    )
-    val visibleProgress = pillInteraction.progress
+    val colors = MaterialTheme.colorScheme
     val actionSpace by animateDpAsState(
-        if (reserveImportSpace) importButtonSize + ImportButtonGap else 0.dp, label = "dockActionSpace",
-    )
-    val dockWidth by animateDpAsState(
-        if (reserveImportSpace) LibraryDockMaxWidth else 320.dp, label = "dockWidth",
+        if (reserveImportSpace) importButtonSize + ImportButtonGap else 0.dp,
+        label = "dockActionSpace",
     )
     Box(
-        // Same reason the library header uses the ignoring-visibility inset:
-        // the reader hides the system bars, so coming back from a book this
-        // measures while the navigation bar is still gone. The default inset
-        // reads 0, the bar is that much shorter, and it slides down into place
-        // as the system bar animates back. Reserving the space either way
-        // keeps it still.
-        modifier = Modifier
-            .fillMaxWidth()
-            // Fade scrolling covers/text beneath the controls and gesture area.
-            .background(Brush.verticalGradient(listOf(
-                scheme.surface.copy(alpha = 0f),
-                scheme.surface.copy(alpha = 0.92f),
-                scheme.surface,
-            )))
+        modifier = Modifier.fillMaxWidth()
             .windowInsetsPadding(WindowInsets.systemBarsIgnoringVisibility
                 .only(WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom))
-            .padding(horizontal = DockSidePadding, vertical = 8.dp),
+            .padding(horizontal = DockSidePadding, vertical = DockVerticalPadding),
         contentAlignment = Alignment.Center,
     ) {
         Row(
-            modifier = Modifier.widthIn(max = dockWidth).fillMaxWidth()
-                .onSizeChanged { onDockHeightChanged(with(density) { it.height.toDp() }) },
+            modifier = Modifier.widthIn(max = LibraryDockMaxWidth).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Surface(
-                modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(30.dp),
-                color = LocalFrogColors.current.nav,
-                shadowElevation = 3.dp,
+            Row(
+                modifier = Modifier.weight(1f)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(colors.surfaceContainerHigh)
+                    .selectableGroup()
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-                Box(modifier = Modifier.padding(FrogDockContentPadding).then(pillInteraction.modifier)) {
-                    Box(modifier = Modifier.matchParentSize()) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(0.5f)
-                                .graphicsLayer {
-                                    translationX = visibleProgress() * size.width * if (isRtl) -1f else 1f
-                                }
-                                .clip(RoundedCornerShape(24.dp))
-                                .background(scheme.primaryContainer)
-                        )
-                    }
-                    Row(
-                        modifier = Modifier.selectableGroup(),
-                        horizontalArrangement = Arrangement.spacedBy(0.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        FrogNavigationItem(
-                            modifier = Modifier.weight(1f),
-                            selected = selectedTab == NavTab.LIBRARY,
-                            selectionProgress = { 1f - visibleProgress() },
-                            enabled = visible,
-                            onClick = { pillInteraction.select(0) },
-                            icon = Icons.Rounded.AutoStories,
-                            label = stringResource(R.string.nav_library),
-                        )
-                        FrogNavigationItem(
-                            modifier = Modifier.weight(1f),
-                            selected = selectedTab == NavTab.PROFILE,
-                            selectionProgress = visibleProgress,
-                            enabled = visible,
-                            onClick = { pillInteraction.select(1) },
-                            icon = Icons.Outlined.PersonOutline,
-                            selectedIcon = Icons.Rounded.Person,
-                            label = stringResource(R.string.nav_profile),
-                        )
-                    }
-                }
+                DockTab(
+                    icon = Icons.Rounded.AutoStories,
+                    label = stringResource(R.string.nav_library),
+                    selected = selectedTab == NavTab.LIBRARY,
+                    enabled = visible,
+                    onClick = { onTabSelected(NavTab.LIBRARY) },
+                    modifier = Modifier.weight(1f),
+                )
+                DockTab(
+                    icon = if (selectedTab == NavTab.PROFILE) Icons.Rounded.Person else Icons.Outlined.PersonOutline,
+                    label = stringResource(R.string.nav_profile),
+                    selected = selectedTab == NavTab.PROFILE,
+                    enabled = visible,
+                    onClick = { onTabSelected(NavTab.PROFILE) },
+                    modifier = Modifier.weight(1f),
+                )
             }
             Spacer(Modifier.width(actionSpace))
         }
@@ -1410,83 +1342,50 @@ internal fun FrogNavigationBar(
 }
 
 @Composable
-private fun FrogNavigationItem(
-    selected: Boolean,
-    selectionProgress: () -> Float,
-    enabled: Boolean,
+private fun DockTab(
     icon: ImageVector,
     label: String,
+    selected: Boolean,
+    enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    selectedIcon: ImageVector = icon,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
-    val pressScale by animateFloatAsState(
-        if (pressed) 0.94f else 1f,
-        animationSpec = tween(100),
-        label = "tabPressScale",
+    val colors = MaterialTheme.colorScheme
+    val container by animateColorAsState(
+        if (selected) colors.primaryContainer else colors.primaryContainer.copy(alpha = 0f),
+        tween(130),
+        label = "dock selection",
     )
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(24.dp))
-            // A bounded ripple paints a second capsule over the moving selection,
-            // leaving a visible trail on taps. Give the content press feedback instead.
-            .selectable(selected = selected, enabled = enabled, role = Role.Tab,
-                interactionSource = interactionSource, indication = null, onClick = onClick)
+    val foreground by animateColorAsState(
+        if (selected) colors.onPrimaryContainer else colors.onSurfaceVariant,
+        tween(130),
+        label = "dock tab tint",
+    )
+    Row(
+        modifier = modifier.height(DockControlHeight - 8.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(container)
+            .selectable(selected = selected, enabled = enabled, role = Role.Tab, onClick = onClick)
             .semantics { contentDescription = label }
-            .graphicsLayer { scaleX = pressScale; scaleY = pressScale }
-            .heightIn(min = 60.dp).padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterVertically),
+            .padding(horizontal = 6.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        // This small scope alone observes every frame. No independent springs:
-        // indicator, tint, icon and label all follow the same finger position.
-        FrogNavigationItemVisuals(selectionProgress, icon, selectedIcon, label)
-    }
-}
-
-@Composable
-private fun FrogNavigationItemVisuals(
-    selectionProgress: () -> Float,
-    icon: ImageVector,
-    selectedIcon: ImageVector,
-    label: String,
-) {
-    val progress = selectionProgress().coerceIn(0f, 1f)
-    val scheme = MaterialTheme.colorScheme
-    val foreground = lerp(scheme.onSurfaceVariant, scheme.onPrimaryContainer, progress)
-    Box(Modifier.size(24.dp)) {
-        Icon(
-            icon, contentDescription = null, tint = foreground,
-            modifier = Modifier.fillMaxSize().graphicsLayer {
-                alpha = if (icon == selectedIcon) 1f else 1f - progress
-            },
-        )
-        if (icon != selectedIcon) {
-            Icon(
-                selectedIcon, contentDescription = null, tint = foreground,
-                modifier = Modifier.fillMaxSize().graphicsLayer { alpha = progress },
+        Icon(icon, contentDescription = null, tint = foreground, modifier = Modifier.size(22.dp))
+        AnimatedVisibility(
+            visible = selected,
+            enter = expandHorizontally(tween(130), expandFrom = Alignment.Start) + fadeIn(tween(130)),
+            exit = shrinkHorizontally(tween(100), shrinkTowards = Alignment.Start) + fadeOut(tween(90)),
+        ) {
+            Text(
+                label,
+                modifier = Modifier.padding(start = 7.dp).clearAndSetSemantics {},
+                style = MaterialTheme.typography.labelLarge,
+                color = foreground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
-    }
-    val caption = label.uppercase(Locale.ROOT)
-    val labelStyle = MaterialTheme.typography.labelMedium.copy(
-        fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.8.sp,
-    )
-    // Measure both weights once, then crossfade in a fixed footprint. Switching
-    // font weight at the halfway point would make the caption visibly jump.
-    Box(contentAlignment = Alignment.Center) {
-        Text(
-            text = caption, style = labelStyle, fontWeight = FontWeight.Medium,
-            color = foreground, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.graphicsLayer { alpha = 1f - progress }.clearAndSetSemantics {},
-        )
-        Text(
-            text = caption, style = labelStyle, fontWeight = FontWeight.SemiBold,
-            color = foreground, maxLines = 1, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.graphicsLayer { alpha = progress }.clearAndSetSemantics {},
-        )
     }
 }
 
@@ -1528,6 +1427,7 @@ private fun ImportFabMenu(
     ) {
         FabMenuItem(
             icon = Icons.Rounded.FileOpen,
+            shape = connectedCardShape(last = false),
             label = stringResource(R.string.fab_add_book),
             visible = expanded,
             onClick = {
@@ -1535,9 +1435,10 @@ private fun ImportFabMenu(
                 onAddBook()
             },
         )
-        FabMenuSpacer(expanded, 10.dp)
+        FabMenuSpacer(expanded, ConnectedCardGap)
         FabMenuItem(
             icon = Icons.Rounded.FolderOpen,
+            shape = connectedCardShape(first = false, last = false),
             label = stringResource(R.string.fab_scan_folder),
             visible = expanded,
             onClick = {
@@ -1545,9 +1446,10 @@ private fun ImportFabMenu(
                 onScanFolder()
             },
         )
-        FabMenuSpacer(expanded, 10.dp)
+        FabMenuSpacer(expanded, ConnectedCardGap)
         FabMenuItem(
             icon = Icons.Rounded.CreateNewFolder,
+            shape = connectedCardShape(first = false),
             label = stringResource(R.string.fab_new_shelf),
             visible = expanded,
             onClick = {
@@ -1599,6 +1501,7 @@ private fun FabMenuItem(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     visible: Boolean,
+    shape: RoundedCornerShape,
     onClick: () -> Unit,
 ) {
     val scheme = MaterialTheme.colorScheme
@@ -1619,11 +1522,11 @@ private fun FabMenuItem(
     Surface(
         onClick = onClick,
         enabled = visible,
-        shape = RoundedCornerShape(20.dp),
-        color = scheme.floatingSurface,
+        shape = shape,
+        color = scheme.cardSurface,
         contentColor = scheme.onSurface,
-        shadowElevation = 3.dp,
         modifier = Modifier
+            .width(200.dp)
             .graphicsLayer {
                 alpha = fade
                 val scale = 0.82f + 0.18f * rise

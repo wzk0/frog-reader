@@ -1994,7 +1994,7 @@ open class BookRepository(private val context: Context? = null) {
 
     /** How this shelf orders the books inside it; the shelf menu's sort choice. */
     open suspend fun setShelfSortMode(shelfId: String, mode: ShelfSortMode): Unit = updateShelves { shelves ->
-        shelves.map { if (it.id == shelfId) it.copy(sortMode = mode) else it }
+        shelves.map { if (it.id == shelfId) it.copy(sortMode = mode, sortModeExplicit = mode != ShelfSortMode.FOLLOW_LIBRARY) else it }
     }
 
     open suspend fun renameShelf(id: String, name: String): Unit = updateShelves { shelves ->

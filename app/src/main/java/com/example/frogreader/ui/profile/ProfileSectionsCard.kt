@@ -1,5 +1,8 @@
 package com.example.frogreader.ui.profile
 
+import com.example.frogreader.ui.components.connectedCard
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.ConnectedCardGap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.clickable
@@ -19,10 +22,8 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.rounded.PlaylistAddCheck
 import androidx.compose.material.icons.rounded.FormatQuote
 import androidx.compose.material.icons.rounded.History
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -40,16 +41,15 @@ import androidx.compose.ui.unit.sp
 import com.example.frogreader.R
 
 private val CardVerticalPadding = 2.dp
-private val DividerThickness = 1.dp
 private val RowHorizontalPadding = 14.dp
 private val RowGap = 10.dp
 
-/** Follow the space released by the ruler on every frame, without a second animation. */
+/** Scale the icon with the space available to the dashboard row. */
 internal fun profileSectionTileSize(rowHeight: Dp, compact: Boolean): Dp {
     val baseHeight = if (compact) 60.dp else 68.dp
-    val baseSize = if (compact) 34.dp else 38.dp
+    val baseSize = if (compact) 38.dp else 42.dp
     val fraction = ((rowHeight - baseHeight) / (84.dp - baseHeight)).coerceIn(0f, 1f)
-    return baseSize + (44.dp - baseSize) * fraction
+    return baseSize + (48.dp - baseSize) * fraction
 }
 
 @Composable
@@ -63,23 +63,15 @@ internal fun ProfileSectionsCard(
     onOpenReadingLog: () -> Unit,
     compact: Boolean = false,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLowest,
-        shadowElevation = 2.dp,
-    ) {
-        // The dashboard may hand this card more height than it needs so that it
-        // reaches the dock; split it evenly so the three rows become larger targets.
+    Box(Modifier.fillMaxWidth()) {
         BoxWithConstraints {
-            val baseRowHeight = if (compact) 60.dp else 68.dp
-            val sharedHeight = (minHeight - CardVerticalPadding * 2 - DividerThickness * 2) / 3
+            val baseRowHeight = if (compact) 64.dp else 72.dp
+            val sharedHeight = (minHeight - CardVerticalPadding * 2 - ConnectedCardGap * 2) / 3
             val rowHeight = maxOf(baseRowHeight, sharedHeight)
-            // The ruler already animates this measured height. Derive every icon
-            // dimension and divider inset from it so they move with the rows.
             val tileSize = profileSectionTileSize(rowHeight, compact)
-            Column(Modifier.padding(vertical = CardVerticalPadding)) {
+            Column(Modifier.padding(vertical = CardVerticalPadding), verticalArrangement = Arrangement.spacedBy(ConnectedCardGap)) {
                 ProfileSectionRow(
+                    shape = connectedCardShape(last = false),
                     icon = Icons.Rounded.FormatQuote,
                     title = stringResource(R.string.profile_quotes_bookmarks),
                     subtitle = pluralStringResource(R.plurals.profile_bookmarks_count, bookmarks, bookmarks),
@@ -89,8 +81,8 @@ internal fun ProfileSectionsCard(
                     minHeight = rowHeight,
                     onClick = onOpenQuotesAndBookmarks,
                 )
-                SectionDivider(tileSize)
                 ProfileSectionRow(
+                    shape = connectedCardShape(first = false, last = false),
                     icon = Icons.AutoMirrored.Rounded.PlaylistAddCheck,
                     title = stringResource(R.string.profile_reading_queue),
                     subtitle = stringResource(R.string.profile_queue_hint),
@@ -100,8 +92,8 @@ internal fun ProfileSectionsCard(
                     minHeight = rowHeight,
                     onClick = onOpenReadingQueue,
                 )
-                SectionDivider(tileSize)
                 ProfileSectionRow(
+                    shape = connectedCardShape(first = false),
                     icon = Icons.Rounded.History,
                     title = stringResource(R.string.profile_reading_log),
                     subtitle = stringResource(R.string.profile_log_hint),
@@ -117,16 +109,6 @@ internal fun ProfileSectionsCard(
 }
 
 @Composable
-private fun SectionDivider(tileSize: Dp) {
-    HorizontalDivider(
-        // Aligned with the row text, past the icon tile.
-        modifier = Modifier.padding(start = RowHorizontalPadding + tileSize + RowGap, end = RowHorizontalPadding),
-        thickness = DividerThickness,
-        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-    )
-}
-
-@Composable
 private fun ProfileSectionRow(
     icon: ImageVector,
     title: String,
@@ -136,11 +118,12 @@ private fun ProfileSectionRow(
     onClick: () -> Unit,
     tileSize: Dp,
     minHeight: Dp,
+    shape: RoundedCornerShape,
 ) {
     val scheme = MaterialTheme.colorScheme
     val largeText = LocalDensity.current.fontScale > 1.3f
     Row(
-        modifier = Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick)
+        modifier = Modifier.fillMaxWidth().connectedCard(scheme, shape).clickable(role = Role.Button, onClick = onClick)
             .heightIn(min = minHeight).padding(horizontal = RowHorizontalPadding, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(RowGap),

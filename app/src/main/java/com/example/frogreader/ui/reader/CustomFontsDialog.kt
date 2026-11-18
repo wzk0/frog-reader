@@ -1,5 +1,10 @@
 package com.example.frogreader.ui.reader
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import com.example.frogreader.ui.components.cardSurface
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.ConnectedCardGap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -17,7 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,7 +35,7 @@ import androidx.compose.material.icons.rounded.BrightnessAuto
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
+import com.example.frogreader.ui.components.FlatDropdownMenu as DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,10 +44,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -171,7 +174,6 @@ internal fun CustomFontDialogSurface(modifier: Modifier = Modifier, content: @Co
         contentColor = scheme.onSurface,
         shape = RoundedCornerShape(28.dp),
         tonalElevation = 0.dp,
-        shadowElevation = 8.dp,
         border = BorderStroke(1.dp, scheme.outlineVariant),
         modifier = modifier,
         content = content,
@@ -262,7 +264,7 @@ internal fun CustomFontsContent(
                 if (opened != null) Modifier.selectableGroup() else Modifier,
             ),
             state = listState,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(ConnectedCardGap),
         ) {
             if (opened != null) {
                 item(key = "auto:${opened.key}") {
@@ -279,11 +281,13 @@ internal fun CustomFontsContent(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
                     )
                 }
-                items(opened.faces, key = { face -> face.key }) { face ->
+                itemsIndexed(opened.faces, key = { _, face -> face.key }) { index, face ->
                     FontLibraryRow(
                         colors = colors,
                         label = face.styleName,
                         face = face,
+                        modifier = Modifier.animateItem(),
+                        shape = connectedCardShape(index, opened.faces.size),
                         preview = previewFamily(face, face.styleName),
                         selected = if (fromBook) !bodyFontAuto && face.matchesSelection(bodyFontPath, emptyMap()) ||
                             !selectedAuto && face.matchesSelection(selectedBookPath, selectedAxes)
@@ -301,9 +305,11 @@ internal fun CustomFontsContent(
             } else {
                 if (embedded.isNotEmpty()) {
                     item { FontLibraryLabel(stringResource(R.string.reader_fonts_in_book), colors) }
-                    items(embedded, key = { group -> "book:${group.key}" }) { group ->
+                    itemsIndexed(embedded, key = { _, group -> "book:${group.key}" }) { index, group ->
                         FontLibraryRow(
                             colors, group.name.removePrefix("Subset-"), group.preview, group.contains(bodyFontPath) || group.contains(selectedBookPath),
+                            modifier = Modifier.animateItem(),
+                            shape = connectedCardShape(index, embedded.size),
                             preview = previewFamily(group.preview, group.name.removePrefix("Subset-")),
                             family = true, onClick = { onOpen(true, group) },
                             onDelete = savedCopies.filterValues(group::contains).keys.toList().takeIf { it.isNotEmpty() }
@@ -316,9 +322,11 @@ internal fun CustomFontsContent(
                         item { FontLibraryLabel(stringResource(R.string.reader_fonts_saved), colors) }
                     }
                 }
-                items(fonts, key = { group -> "saved:${group.key}" }) { group ->
+                itemsIndexed(fonts, key = { _, group -> "saved:${group.key}" }) { index, group ->
                     FontLibraryRow(
                         colors, group.name.removePrefix("Subset-"), group.preview, group.contains(selectedPath),
+                        modifier = Modifier.animateItem(),
+                        shape = connectedCardShape(index, fonts.size),
                         preview = previewFamily(group.preview, group.name.removePrefix("Subset-")),
                         family = true,
                         onClick = { onOpen(false, group) },
@@ -338,9 +346,11 @@ internal fun CustomFontsContent(
                 if (presets.isNotEmpty()) {
                     item { Spacer(Modifier.height(10.dp)) }
                     item { FontLibraryLabel(stringResource(R.string.reader_fonts_presets), colors) }
-                    items(presets, key = { preset -> "preset:${preset.id}" }) { preset ->
+                    itemsIndexed(presets, key = { _, preset -> "preset:${preset.id}" }) { index, preset ->
                         PresetFontRow(
                             colors = colors,
+                            modifier = Modifier.animateItem(),
+                            shape = connectedCardShape(index, presets.size),
                             preset = preset,
                             installed = preset.id in installedPresets,
                             // Null unless this row is the one being fetched, so a
@@ -441,6 +451,8 @@ private fun PresetFontRow(
     downloadingLabel: String,
     installedLabel: String,
     onClick: () -> Unit,
+    modifier: Modifier,
+    shape: RoundedCornerShape,
 ) {
     val scheme = MaterialTheme.colorScheme
     val haptics = LocalHapticFeedback.current
@@ -448,9 +460,9 @@ private fun PresetFontRow(
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(scheme.surfaceContainer)
+        modifier = modifier.fillMaxWidth()
+            .clip(shape)
+            .background(scheme.cardSurface)
             .clickable(enabled = fraction == null, role = Role.Button) {
                 haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
                 onClick()
@@ -529,16 +541,18 @@ private fun FontLibraryRow(
     onClick: () -> Unit,
     onDelete: (() -> Unit)? = null,
     deleteLabel: String? = null,
+    modifier: Modifier,
+    shape: RoundedCornerShape,
 ) {
     val haptics = LocalHapticFeedback.current
     var menuOpen by remember { mutableStateOf(false) }
     val scheme = MaterialTheme.colorScheme
-    Column {
+    Column(modifier) {
         Box {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
-                    .background(if (selected) scheme.primaryContainer else scheme.surfaceContainer)
+                modifier = Modifier.fillMaxWidth().clip(shape)
+                    .background(if (selected) scheme.primaryContainer else scheme.cardSurface)
                     .semantics { this.selected = selected }
                     .combinedClickable(
                         role = if (family) Role.Button else Role.RadioButton,
@@ -575,7 +589,6 @@ private fun FontLibraryRow(
             }
             if (onDelete != null) {
                 DropdownMenu(
-                    containerColor = scheme.floatingSurface,
                     tonalElevation = 0.dp,
                     expanded = menuOpen,
                     onDismissRequest = { menuOpen = false },

@@ -1,8 +1,11 @@
 package com.example.frogreader.ui.profile
 
+import com.example.frogreader.ui.components.cardSurface
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.ConnectedCardGap
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -11,11 +14,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material3.*
+import com.example.frogreader.ui.components.FlatDropdownMenu as DropdownMenu
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.stringResource
@@ -100,7 +103,7 @@ internal fun ReadingLogDatePickerContent(
                         Icon(Icons.Rounded.ExpandMore, null, Modifier.size(20.dp), tint = colors.onSurfaceVariant)
                     }
                 }
-                DropdownMenu(precisionMenu, { precisionMenu = false }, containerColor = colors.floatingSurface, tonalElevation = 0.dp) {
+                DropdownMenu(precisionMenu, { precisionMenu = false }, tonalElevation = 0.dp) {
                     ReadingDatePrecision.entries.forEach { option ->
                         DropdownMenuItem(text = { Text(stringResource(option.label)) },
                             trailingIcon = { if (option == precision) Icon(Icons.Rounded.Check, null) },
@@ -156,9 +159,10 @@ private fun MonthYearPicker(year: Int, month: Int, currentYear: Int, changeYear:
     Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(Modifier.weight(1.65f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             PickerLabel(stringResource(R.string.reading_log_month))
-            LazyColumn(Modifier.fillMaxWidth().height(288.dp), state = monthScroll, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                items((1..12).toList(), key = { it }) { candidate ->
-                    DateChoice(names[candidate - 1], candidate == month, { changeMonth(candidate) })
+            LazyColumn(Modifier.fillMaxWidth().height(288.dp), state = monthScroll, verticalArrangement = Arrangement.spacedBy(ConnectedCardGap)) {
+                itemsIndexed((1..12).toList(), key = { _, candidate -> candidate }) { index, candidate ->
+                    DateChoice(names[index], candidate == month, { changeMonth(candidate) },
+                        modifier = Modifier.animateItem(), shape = connectedCardShape(index, names.size))
                 }
             }
         }
@@ -184,9 +188,10 @@ internal fun readingLogPickerYears(currentYear: Int): List<Int> = (currentYear d
 internal fun ReadingLogYearList(year: Int, currentYear: Int, modifier: Modifier, changeYear: (Int) -> Unit) {
     val years = remember(currentYear) { readingLogPickerYears(currentYear) }
     val scroll = rememberLazyListState((years.indexOf(year) - 2).coerceAtLeast(0))
-    LazyColumn(modifier, state = scroll, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        items(years, key = { it }) { candidate ->
-            DateChoice(candidate.toString(), candidate == year, { changeYear(candidate) }, centered = true)
+    LazyColumn(modifier, state = scroll, verticalArrangement = Arrangement.spacedBy(ConnectedCardGap)) {
+        itemsIndexed(years, key = { _, candidate -> candidate }) { index, candidate ->
+            DateChoice(candidate.toString(), candidate == year, { changeYear(candidate) }, centered = true,
+                modifier = Modifier.animateItem(), shape = connectedCardShape(index, years.size))
         }
     }
 }
@@ -195,10 +200,12 @@ internal fun ReadingLogYearList(year: Int, currentYear: Int, modifier: Modifier,
 private fun PickerLabel(text: String) = Text(text, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
 @Composable
-internal fun DateChoice(text: String, selected: Boolean, click: () -> Unit, centered: Boolean = false, enabled: Boolean = true) {
+internal fun DateChoice(text: String, selected: Boolean, click: () -> Unit, centered: Boolean = false, enabled: Boolean = true,
+    modifier: Modifier = Modifier, shape: RoundedCornerShape = connectedCardShape(),
+) {
     val colors = MaterialTheme.colorScheme
-    Surface(onClick = click, enabled = enabled, modifier = Modifier.fillMaxWidth().semantics { this.selected = selected },
-        shape = RoundedCornerShape(12.dp), color = if (selected) colors.primaryContainer else Color.Transparent,
+    Surface(onClick = click, enabled = enabled, modifier = modifier.fillMaxWidth().semantics { this.selected = selected },
+        shape = shape, color = if (selected) colors.primaryContainer else colors.cardSurface,
         contentColor = when { !enabled -> colors.onSurface.copy(alpha = .38f); selected -> colors.onPrimaryContainer; else -> colors.onSurface }) {
         Box(Modifier.heightIn(min = 48.dp).padding(horizontal = 12.dp, vertical = 12.dp),
             contentAlignment = if (centered) Alignment.Center else Alignment.CenterStart) {

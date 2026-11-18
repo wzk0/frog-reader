@@ -1,5 +1,9 @@
 package com.example.frogreader.ui.profile
 
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -26,10 +30,6 @@ private fun SepiaNavigationPreview() = NavigationPreview(AppTheme.SEPIA, NavTab.
 @Composable
 private fun LargeTextNavigationPreview() = NavigationPreview(AppTheme.WHITE, NavTab.PROFILE)
 
-@Preview(name = "Navigation · halfway", widthDp = 360, heightDp = 96)
-@Composable
-private fun HalfwayNavigationPreview() = NavigationPreview(AppTheme.SEPIA, NavTab.LIBRARY, 0.5f)
-
 @Preview(name = "Navigation · Material You", widthDp = 360, heightDp = 96, wallpaper = 2)
 @Composable
 private fun DynamicNavigationPreview() = NavigationPreview(AppTheme.OLED, NavTab.PROFILE, dynamic = true)
@@ -43,11 +43,11 @@ private fun RtlNavigationPreview() {
 }
 
 @Composable
-private fun NavigationPreview(theme: AppTheme, selected: NavTab, progress: Float = if (selected == NavTab.PROFILE) 1f else 0f, dynamic: Boolean = false) {
+private fun NavigationPreview(theme: AppTheme, selected: NavTab, dynamic: Boolean = false) {
+    var activeTab by remember(selected) { mutableStateOf(selected) }
     FrogReaderTheme(theme, dynamicColor = dynamic) {
         FrogMainScaffold(
-            navigationVisible = true, selectedTab = selected, onTabSelected = {},
-            tabProgress = { progress },
+            navigationVisible = true, selectedTab = activeTab, onTabSelected = { activeTab = it },
             importVisible = true, importing = false, importExpanded = false,
             onImportExpandedChange = {}, onAddBook = {}, onScanFolder = {}, onNewShelf = {},
         ) {}

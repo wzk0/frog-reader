@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.reader
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import android.graphics.LinearGradient
 import android.graphics.Matrix
 import android.graphics.Paint
@@ -13,11 +15,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
@@ -383,7 +383,6 @@ private class PageCurlRenderer(colors: ReaderColors) {
     private val lightingValues = FloatArray(9)
     private val clip = Path()
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val paper = lerp(
         colors.background, colors.text,
         if (colors.background.luminance() < 0.1f) 0.085f else 0.025f,
@@ -402,11 +401,6 @@ private class PageCurlRenderer(colors: ReaderColors) {
     } else {
         colors.background.toArgb()
     }
-    private val shadow = LinearGradient(
-        0f, 0f, 1f, 0f,
-        intArrayOf(colors.shadow.copy(alpha = 0.28f).toArgb(), colors.shadow.copy(alpha = 0f).toArgb()),
-        null, Shader.TileMode.CLAMP,
-    )
     // One gradient across the whole cylinder keeps illumination continuous at
     // strip boundaries. The shaders and their stop arrays are built only once.
     private val backLighting = cylinderGradient(paper) { normal ->
@@ -440,7 +434,6 @@ private class PageCurlRenderer(colors: ReaderColors) {
         val canvas = scope.drawContext.canvas.nativeCanvas
 
         updateLighting(width, height)
-        drawShadow(scope, width, height)
         paint.alpha = 255
         for (i in 0 until geometry.stripCount) {
             val strip = geometry.strips[i]
@@ -509,32 +502,6 @@ private class PageCurlRenderer(colors: ReaderColors) {
         backLighting.setLocalMatrix(lightingMatrix)
         frontLighting.setLocalMatrix(lightingMatrix)
         rimLighting.setLocalMatrix(lightingMatrix)
-    }
-
-    private fun drawShadow(scope: DrawScope, width: Float, height: Float) {
-        val span = geometry.shadowSpan
-        if (span <= 0.01f) return
-        val canvas = scope.drawContext.canvas.nativeCanvas
-        val save = canvas.save()
-        try {
-            // Project the cylinder's broad shadow onto the flat sheet below.
-            // A reusable unit gradient avoids allocating shaders or requesting
-            // unsupported pre-28 shadow/blur operations on each frame.
-            if (geometry.mirrored) {
-                canvas.translate(width, 0f)
-                canvas.scale(-1f, 1f)
-            }
-            canvas.translate(width * 0.5f, height * 0.5f)
-            canvas.rotate(Math.toDegrees(kotlin.math.atan2(geometry.normalY, geometry.normalX).toDouble()).toFloat())
-            canvas.translate(-width * 0.5f, -height * 0.5f)
-            canvas.translate(geometry.foldStart + geometry.radius * 0.85f, geometry.axisMin)
-            canvas.scale(span, geometry.axisMax - geometry.axisMin)
-            shadowPaint.shader = shadow
-            shadowPaint.alpha = (255f * geometry.shadowOpacity).toInt()
-            canvas.drawRect(0f, 0f, 1f, 1f, shadowPaint)
-        } finally {
-            canvas.restoreToCount(save)
-        }
     }
 
     private fun buildClip(source: FloatArray) {

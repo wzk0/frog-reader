@@ -1,5 +1,6 @@
 <resources>
-    <string name="app_name">Frog Reader</string>
+    <string name="app_name" translatable="false">青蛙阅读</string>
+    <string name="app_short_name" translatable="false">蛙阅</string>
 
     <!-- Library screen -->
     <string name="library_empty_title">还没有书</string>
@@ -55,6 +56,7 @@
     <string name="library_sort_recent">按最近阅读</string>
     <string name="library_sort_filename">按文件名</string>
     <string name="library_sort_folder">按文件夹</string>
+    <string name="shelf_sort_follow_library">跟随书库排序</string>
     <string name="library_folder_unsorted">未分类</string>
     <plurals name="library_folder_books">
         <item quantity="one">%1$d 本</item>
@@ -346,8 +348,8 @@
     <string name="app_lock_title">用指纹锁定应用</string>
     <string name="app_lock_subtitle">每次打开应用都需要解锁</string>
     <string name="app_lock_unavailable">请先在此设备上设置指纹或屏幕锁</string>
-    <string name="lock_prompt_title">解锁 Frog Reader</string>
-    <string name="lock_locked_title">Frog Reader 已锁定</string>
+    <string name="lock_prompt_title">解锁 青蛙阅读</string>
+    <string name="lock_locked_title">青蛙阅读 已锁定</string>
     <string name="lock_unlock">解锁</string>
 
     <!-- Redesigned settings hub and sub-pages -->
@@ -375,9 +377,9 @@
     <string name="settings_about_licenses">许可</string>
     <string name="settings_about_view_license">查看 GPLv3 许可</string>
     <string name="settings_about_view_third_party">查看第三方声明</string>
-    <string name="settings_about_license_app">FrogReader（GPLv3）</string>
+    <string name="settings_about_license_app">青蛙阅读（GPLv3）</string>
     <string name="settings_about_license_third_party">第三方声明</string>
-    <string name="settings_about_license_notice">原版版权所有 © 2026 KNITIPKA；本中文分支同样以 GPL-3.0-only 发布。FrogReader 是自由软件：你可以依据 GNU 通用公共许可证第 3 版（GPL-3.0-only）重新发布和修改它。它完全不提供任何担保。完整许可如下；本分支的源代码见 GitHub 仓库。</string>
+    <string name="settings_about_license_notice">原版版权所有 © 2026 KNITIPKA；本中文分支同样以 GPL-3.0-only 发布。青蛙阅读 是自由软件：你可以依据 GNU 通用公共许可证第 3 版（GPL-3.0-only）重新发布和修改它。它完全不提供任何担保。完整许可如下；本分支的源代码见 GitHub 仓库。</string>
     <string name="settings_about_license_failed">无法加载许可文本。完整许可可在 GitHub 仓库中查看。</string>
     <string name="settings_about_intro">私密、离线阅读，无需账号。中文分支由 wzk0 维护，在上游 FrogReader 的基础上增加了完整汉化、文件夹书架、按文件夹/文件名排序与在线字体下载。</string>
     <string name="settings_about_support">支持</string>
@@ -389,7 +391,7 @@
     <string name="settings_about_signal">Signal</string>
     <string name="settings_about_email">邮件</string>
     <string name="settings_about_email_subtitle">问题与建议</string>
-    <string name="settings_about_email_subject">FrogReader 反馈</string>
+    <string name="settings_about_email_subject">青蛙阅读 反馈</string>
     <string name="settings_about_diagnostics">复制诊断信息</string>
     <string name="settings_about_diagnostics_subtitle">设备、书籍与阅读设置</string>
     <string name="settings_about_diagnostics_copied">诊断信息已复制</string>
@@ -426,17 +428,17 @@
     <string name="settings_auto_hide_return">自动隐藏返回按钮</string>
     <string name="settings_auto_hide_return_subtitle">跳转 15 秒后忘记上一页，即使控件已隐藏。无障碍设置可能会延长时间。</string>
     <string name="settings_startup_title">打开应用时</string>
-    <string name="settings_startup_subtitle">FrogReader 的起始页面</string>
+    <string name="settings_startup_subtitle">青蛙阅读 的起始页面</string>
     <string name="settings_startup_last_book">上次阅读的书</string>
     <string name="settings_reading_helper">页面颜色、字体和边距仍在阅读器自己的面板中设置。</string>
 
     <string name="settings_app_lock_section">应用锁</string>
     <string name="settings_lock_delay_title">要求解锁</string>
-    <string name="settings_lock_delay_subtitle">离开 FrogReader 之后</string>
+    <string name="settings_lock_delay_subtitle">离开 青蛙阅读 之后</string>
     <string name="settings_lock_delay_immediate_short">立即</string>
     <string name="settings_lock_delay_one_minute_short">1 分钟</string>
     <string name="settings_lock_delay_fifteen_minutes_short">15 分钟</string>
-    <string name="settings_privacy_helper">解锁使用此设备上已设置的指纹或屏幕锁。FrogReader 没有账号，也不会向任何地方发送数据。</string>
+    <string name="settings_privacy_helper">解锁使用此设备上已设置的指纹或屏幕锁。青蛙阅读 没有账号，也不会向任何地方发送数据。</string>
 
     <string name="backup_include_now_section">立即备份包含</string>
     <string name="backup_automatic_data_only_helper">自动备份始终只备份数据，避免大量的后台传输。</string>
@@ -469,7 +471,7 @@
     <!-- Widget -->
     <string name="widget_label">继续阅读</string>
     <string name="widget_description">回到你正在读的书</string>
-    <string name="widget_empty">还没有书——点击打开 Frog Reader</string>
+    <string name="widget_empty">还没有书——点击打开 青蛙阅读</string>
     <string name="widget_percent">已读 %1$d%%</string>
 
     <!-- Navigation & Tracker -->
@@ -542,7 +544,7 @@
     <string name="scan_state_failed">无法读取此文件</string>
     <string name="scan_retry">重试</string>
     <string name="scan_empty">此文件夹中没有书</string>
-    <string name="scan_empty_hint">Frog Reader 会查找 EPUB、FB2、MOBI、TXT 和 Markdown 文件，包括子文件夹中的。</string>
+    <string name="scan_empty_hint">青蛙阅读 会查找 EPUB、FB2、MOBI、TXT 和 Markdown 文件，包括子文件夹中的。</string>
     <string name="scan_empty_search">没有匹配的书</string>
     <string name="scan_access_lost">已失去对此文件夹的访问权限</string>
     <string name="scan_access_lost_hint">请重新选择以继续。</string>
@@ -564,7 +566,7 @@
     <string name="metadata_try_again_hint">请重试，或查看错误详情。</string>
     <string name="metadata_restore_cover">恢复封面</string>
     <string name="metadata_remove_cover">移除封面</string>
-    <string name="metadata_file_hint">更改会写入 FrogReader 中保存的书籍文件。导出副本即可在其他地方使用；你最初的导入文件不会改变。</string>
+    <string name="metadata_file_hint">更改会写入 青蛙阅读 中保存的书籍文件。导出副本即可在其他地方使用；你最初的导入文件不会改变。</string>
     <string name="metadata_basics">书籍</string>
     <string name="metadata_authors">作者</string>
     <string name="metadata_title_required">书名不能为空。</string>
@@ -576,7 +578,7 @@
     <string name="metadata_series_number">系列序号</string>
     <string name="metadata_series_hint">可选；请先填写系列名称。允许 1.5 这样的小数。</string>
     <string name="metadata_year_hint">请输入四位年份。</string>
-    <string name="metadata_mobi_hint">MOBI / AZW3 将系列和译者保存在内嵌扩展中。FrogReader 会读取这些字段，其他阅读器可能不显示。</string>
+    <string name="metadata_mobi_hint">MOBI / AZW3 将系列和译者保存在内嵌扩展中。青蛙阅读 会读取这些字段，其他阅读器可能不显示。</string>
     <string name="metadata_save_file">保存到书籍</string>
     <string name="metadata_saving">正在处理…</string>
     <string name="metadata_saved">已保存到书籍文件</string>

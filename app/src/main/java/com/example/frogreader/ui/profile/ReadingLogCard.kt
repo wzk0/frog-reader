@@ -1,12 +1,14 @@
 package com.example.frogreader.ui.profile
 
-import androidx.compose.foundation.BorderStroke
+import com.example.frogreader.ui.components.cardSurface
+import com.example.frogreader.ui.components.connectedCardShape
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import com.example.frogreader.ui.components.FlatDropdownMenu as DropdownMenu
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,6 +44,7 @@ internal fun ReadingLogCard(entry: ReadingLogEntry, cover: File?, held: Boolean,
     open: () -> Unit, edit: () -> Unit, delete: () -> Unit, up: () -> Boolean, down: () -> Boolean,
     start: (Float) -> Unit, move: (Float) -> Unit, stop: (Boolean) -> Unit, offset: () -> Int,
     progressPercent: Int? = readingLogProgressPercent(entry),
+    shape: RoundedCornerShape = connectedCardShape(),
 ) {
     val colors = MaterialTheme.colorScheme
     var menu by remember { mutableStateOf(false) }
@@ -53,8 +56,8 @@ internal fun ReadingLogCard(entry: ReadingLogEntry, cover: File?, held: Boolean,
     val upLabel = stringResource(R.string.reading_queue_move_up); val downLabel = stringResource(R.string.reading_queue_move_down)
     val dragLabel = stringResource(R.string.reading_queue_drag, entry.title)
     val book = remember(entry.title, entry.author) { Book(entry.id, entry.title, entry.author, BookFormat.EPUB, addedAtMillis = entry.createdAtMillis) }
-    Surface(onClick = open, enabled = enabled || held, shape = RoundedCornerShape(16.dp), color = colors.surfaceContainerLowest,
-        border = if (held) BorderStroke(1.dp, colors.primary) else null,
+    Surface(onClick = open, enabled = enabled || held, shape = shape,
+        color = if (held) colors.secondaryContainer else colors.cardSurface,
         modifier = Modifier.fillMaxWidth().onGloballyPositioned { cardTop = it.positionInRoot().y }.semantics {
             customActions = buildList {
                 if (enabled) {
@@ -85,7 +88,7 @@ internal fun ReadingLogCard(entry: ReadingLogEntry, cover: File?, held: Boolean,
                         IconButton(onClick = { menu = true }, enabled = enabled, modifier = Modifier.size(48.dp)) {
                             Icon(Icons.Rounded.MoreHoriz, stringResource(R.string.reading_queue_more), Modifier.size(22.dp), tint = colors.onSurfaceVariant)
                         }
-                        DropdownMenu(menu, { menu = false }, containerColor = colors.floatingSurface) {
+                        DropdownMenu(menu, { menu = false }) {
                             DropdownMenuItem(text = { Text(editLabel) }, leadingIcon = { Icon(Icons.Rounded.Edit, null) }, onClick = { menu = false; edit() })
                             DropdownMenuItem(text = { Text(stringResource(R.string.reading_queue_remove), color = colors.error) },
                                 leadingIcon = { Icon(Icons.Rounded.DeleteOutline, null, tint = colors.error) }, onClick = { menu = false; delete() })

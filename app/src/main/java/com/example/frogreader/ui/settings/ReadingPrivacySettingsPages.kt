@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.settings
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -24,11 +26,9 @@ import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -96,54 +96,59 @@ internal fun ReadingSettingsPage(
         onBack = onBack,
     ) {
         SettingsSectionLabel(stringResource(R.string.settings_reader_panels_section))
-        SettingsCard {
-            ReaderChromeStyleSettingsRow(
-                settings = settings,
-                onSelected = { selected ->
-                    onUpdate { it.copy(readerChromeStyle = selected) }
-                },
-            )
-            SettingsDivider()
+        SettingsRows {
+            SettingsCardRow(last = false) {
+                ReaderChromeStyleSettingsRow(
+                    settings = settings,
+                    onSelected = { selected ->
+                        onUpdate { it.copy(readerChromeStyle = selected) }
+                    },
+                )
+            }
             ReaderPanelBehaviorSettingsRows(settings, onUpdate)
         }
 
         Spacer(Modifier.height(24.dp))
         SettingsSectionLabel(stringResource(R.string.settings_controls_gestures_section))
-        SettingsCard {
-            SettingsSwitchRow(
-                icon = Icons.AutoMirrored.Rounded.VolumeUp,
-                title = stringResource(R.string.settings_volume_keys),
-                subtitle = stringResource(R.string.settings_volume_keys_subtitle),
-                checked = settings.volumeKeyPaging,
-                onCheckedChange = { checked ->
-                    onUpdate { it.copy(volumeKeyPaging = checked) }
-                },
-            )
-            SettingsDivider()
-            SettingsSwitchRow(
-                icon = Icons.Rounded.Brightness6,
-                title = stringResource(R.string.settings_reader_brightness_swipe),
-                subtitle = stringResource(R.string.settings_reader_brightness_swipe_subtitle),
-                checked = settings.brightnessSwipeEnabled,
-                onCheckedChange = { checked ->
-                    onUpdate { it.copy(brightnessSwipeEnabled = checked) }
-                },
-            )
-            SettingsDivider()
-            SettingsSwitchRow(
-                icon = Icons.Rounded.Vibration,
-                title = stringResource(R.string.settings_haptics),
-                subtitle = stringResource(R.string.settings_haptics_subtitle),
-                checked = settings.haptics,
-                onCheckedChange = { checked ->
-                    onUpdate { it.copy(haptics = checked) }
-                },
-            )
+        SettingsRows {
+            SettingsCardRow(last = false) {
+                SettingsSwitchRow(
+                    icon = Icons.AutoMirrored.Rounded.VolumeUp,
+                    title = stringResource(R.string.settings_volume_keys),
+                    subtitle = stringResource(R.string.settings_volume_keys_subtitle),
+                    checked = settings.volumeKeyPaging,
+                    onCheckedChange = { checked ->
+                        onUpdate { it.copy(volumeKeyPaging = checked) }
+                    },
+                )
+            }
+            SettingsCardRow(first = false, last = false) {
+                SettingsSwitchRow(
+                    icon = Icons.Rounded.Brightness6,
+                    title = stringResource(R.string.settings_reader_brightness_swipe),
+                    subtitle = stringResource(R.string.settings_reader_brightness_swipe_subtitle),
+                    checked = settings.brightnessSwipeEnabled,
+                    onCheckedChange = { checked ->
+                        onUpdate { it.copy(brightnessSwipeEnabled = checked) }
+                    },
+                )
+            }
+            SettingsCardRow(first = false) {
+                SettingsSwitchRow(
+                    icon = Icons.Rounded.Vibration,
+                    title = stringResource(R.string.settings_haptics),
+                    subtitle = stringResource(R.string.settings_haptics_subtitle),
+                    checked = settings.haptics,
+                    onCheckedChange = { checked ->
+                        onUpdate { it.copy(haptics = checked) }
+                    },
+                )
+            }
         }
 
         Spacer(Modifier.height(24.dp))
         SettingsSectionLabel(stringResource(R.string.settings_selected_text_section))
-        SettingsCard {
+        SettingsRows {
             ExternalTextAction.entries.forEachIndexed { index, action ->
                 val apps = rememberExternalTextApps(action)
                 val choice = settings.defaultApp(action)
@@ -162,43 +167,45 @@ internal fun ReadingSettingsPage(
                         else -> R.string.external_text_unavailable
                     },
                 )
-                if (index > 0) {
-                    SettingsDivider()
+                SettingsCardRow(first = index == 0, last = index == ExternalTextAction.entries.lastIndex) {
+                    ExternalTextActionSettingsRow(
+                        action = action,
+                        selectedLabel = selectedLabel,
+                        onClick = { choosingAction = action },
+                    )
                 }
-                ExternalTextActionSettingsRow(
-                    action = action,
-                    selectedLabel = selectedLabel,
-                    onClick = { choosingAction = action },
-                )
             }
         }
 
         Spacer(Modifier.height(24.dp))
         SettingsSectionLabel(stringResource(R.string.settings_screen_startup_section))
-        SettingsCard {
-            SettingsControlRow(
-                icon = Icons.AutoMirrored.Rounded.Login,
-                title = stringResource(R.string.settings_startup_title),
-                subtitle = stringResource(R.string.settings_startup_subtitle),
-                selected = settings.startupDestination,
-                options = listOf(
-                    StartupDestination.LIBRARY to stringResource(R.string.nav_library),
-                    StartupDestination.LAST_BOOK to stringResource(R.string.settings_startup_last_book),
-                ),
-                onSelected = { selected ->
-                    onUpdate { it.copy(startupDestination = selected) }
-                },
-            )
-            SettingsDivider()
-            SettingsSwitchRow(
-                icon = Icons.Rounded.Visibility,
-                title = stringResource(R.string.settings_keep_screen_on),
-                subtitle = stringResource(R.string.settings_keep_screen_on_subtitle),
-                checked = settings.keepScreenOn,
-                onCheckedChange = { checked ->
-                    onUpdate { it.copy(keepScreenOn = checked) }
-                },
-            )
+        SettingsRows {
+            SettingsCardRow(last = false) {
+                SettingsControlRow(
+                    icon = Icons.AutoMirrored.Rounded.Login,
+                    title = stringResource(R.string.settings_startup_title),
+                    subtitle = stringResource(R.string.settings_startup_subtitle),
+                    selected = settings.startupDestination,
+                    options = listOf(
+                        StartupDestination.LIBRARY to stringResource(R.string.nav_library),
+                        StartupDestination.LAST_BOOK to stringResource(R.string.settings_startup_last_book),
+                    ),
+                    onSelected = { selected ->
+                        onUpdate { it.copy(startupDestination = selected) }
+                    },
+                )
+            }
+            SettingsCardRow(first = false) {
+                SettingsSwitchRow(
+                    icon = Icons.Rounded.Visibility,
+                    title = stringResource(R.string.settings_keep_screen_on),
+                    subtitle = stringResource(R.string.settings_keep_screen_on_subtitle),
+                    checked = settings.keepScreenOn,
+                    onCheckedChange = { checked ->
+                        onUpdate { it.copy(keepScreenOn = checked) }
+                    },
+                )
+            }
         }
         SettingsHelper(stringResource(R.string.settings_reading_helper))
     }
@@ -243,29 +250,33 @@ internal fun ReaderPanelBehaviorSettingsRows(
     settings: AppSettings,
     onUpdate: ((AppSettings) -> AppSettings) -> Unit,
 ) {
-    SettingsSwitchRow(
-        icon = Icons.Rounded.DragHandle,
-        title = stringResource(R.string.settings_reader_collapsed_handle),
-        subtitle = stringResource(R.string.settings_reader_collapsed_handle_subtitle),
-        checked = settings.showCollapsedReaderHandle,
-        onCheckedChange = { checked -> onUpdate { it.copy(showCollapsedReaderHandle = checked) } },
-    )
-    SettingsDivider()
-    SettingsSwitchRow(
-        icon = Icons.Rounded.SwipeUp,
-        title = stringResource(R.string.settings_reader_expand_on_swipe),
-        subtitle = stringResource(R.string.settings_reader_expand_on_swipe_subtitle),
-        checked = settings.expandReaderPanelsOnSwipe,
-        onCheckedChange = { checked -> onUpdate { it.copy(expandReaderPanelsOnSwipe = checked) } },
-    )
-    SettingsDivider()
-    SettingsSwitchRow(
-        icon = Icons.Rounded.Timer,
-        title = stringResource(R.string.settings_auto_hide_return),
-        subtitle = stringResource(R.string.settings_auto_hide_return_subtitle),
-        checked = settings.autoHideReturnButton,
-        onCheckedChange = { checked -> onUpdate { it.copy(autoHideReturnButton = checked) } },
-    )
+    SettingsCardRow(first = false, last = false) {
+        SettingsSwitchRow(
+            icon = Icons.Rounded.DragHandle,
+            title = stringResource(R.string.settings_reader_collapsed_handle),
+            subtitle = stringResource(R.string.settings_reader_collapsed_handle_subtitle),
+            checked = settings.showCollapsedReaderHandle,
+            onCheckedChange = { checked -> onUpdate { it.copy(showCollapsedReaderHandle = checked) } },
+        )
+    }
+    SettingsCardRow(first = false, last = false) {
+        SettingsSwitchRow(
+            icon = Icons.Rounded.SwipeUp,
+            title = stringResource(R.string.settings_reader_expand_on_swipe),
+            subtitle = stringResource(R.string.settings_reader_expand_on_swipe_subtitle),
+            checked = settings.expandReaderPanelsOnSwipe,
+            onCheckedChange = { checked -> onUpdate { it.copy(expandReaderPanelsOnSwipe = checked) } },
+        )
+    }
+    SettingsCardRow(first = false) {
+        SettingsSwitchRow(
+            icon = Icons.Rounded.Timer,
+            title = stringResource(R.string.settings_auto_hide_return),
+            subtitle = stringResource(R.string.settings_auto_hide_return_subtitle),
+            checked = settings.autoHideReturnButton,
+            onCheckedChange = { checked -> onUpdate { it.copy(autoHideReturnButton = checked) } },
+        )
+    }
 }
 
 @Composable
@@ -281,23 +292,25 @@ internal fun PrivacySettingsPage(
         onBack = onBack,
     ) {
         SettingsSectionLabel(stringResource(R.string.settings_app_lock_section))
-        SettingsCard {
-            SettingsSwitchRow(
-                icon = Icons.Rounded.Fingerprint,
-                title = stringResource(R.string.app_lock_title),
-                subtitle = stringResource(
-                    if (biometricsAvailable) {
-                        R.string.app_lock_subtitle
-                    } else {
-                        R.string.app_lock_unavailable
+        SettingsRows {
+            SettingsCardRow(last = !settings.appLock) {
+                SettingsSwitchRow(
+                    icon = Icons.Rounded.Fingerprint,
+                    title = stringResource(R.string.app_lock_title),
+                    subtitle = stringResource(
+                        if (biometricsAvailable) {
+                            R.string.app_lock_subtitle
+                        } else {
+                            R.string.app_lock_unavailable
+                        },
+                    ),
+                    checked = settings.appLock,
+                    enabled = biometricsAvailable || settings.appLock,
+                    onCheckedChange = { checked ->
+                        onUpdate { it.copy(appLock = checked) }
                     },
-                ),
-                checked = settings.appLock,
-                enabled = biometricsAvailable || settings.appLock,
-                onCheckedChange = { checked ->
-                    onUpdate { it.copy(appLock = checked) }
-                },
-            )
+                )
+            }
 
             AnimatedVisibility(
                 visible = settings.appLock,
@@ -305,27 +318,28 @@ internal fun PrivacySettingsPage(
                 exit = shrinkVertically(tween(200)) + fadeOut(tween(150)),
             ) {
                 Column {
-                    SettingsDivider()
-                    SettingsControlRow(
-                        icon = Icons.Rounded.Timer,
-                        title = stringResource(R.string.settings_lock_delay_title),
-                        subtitle = stringResource(R.string.settings_lock_delay_subtitle),
-                        selected = settings.appLockDelay,
-                        options = listOf(
-                            AppLockDelay.IMMEDIATE to stringResource(
-                                R.string.settings_lock_delay_immediate_short,
+                    SettingsCardRow(first = false) {
+                        SettingsControlRow(
+                            icon = Icons.Rounded.Timer,
+                            title = stringResource(R.string.settings_lock_delay_title),
+                            subtitle = stringResource(R.string.settings_lock_delay_subtitle),
+                            selected = settings.appLockDelay,
+                            options = listOf(
+                                AppLockDelay.IMMEDIATE to stringResource(
+                                    R.string.settings_lock_delay_immediate_short,
+                                ),
+                                AppLockDelay.ONE_MINUTE to stringResource(
+                                    R.string.settings_lock_delay_one_minute_short,
+                                ),
+                                AppLockDelay.FIFTEEN_MINUTES to stringResource(
+                                    R.string.settings_lock_delay_fifteen_minutes_short,
+                                ),
                             ),
-                            AppLockDelay.ONE_MINUTE to stringResource(
-                                R.string.settings_lock_delay_one_minute_short,
-                            ),
-                            AppLockDelay.FIFTEEN_MINUTES to stringResource(
-                                R.string.settings_lock_delay_fifteen_minutes_short,
-                            ),
-                        ),
-                        onSelected = { selected ->
-                            onUpdate { it.copy(appLockDelay = selected) }
-                        },
-                    )
+                            onSelected = { selected ->
+                                onUpdate { it.copy(appLockDelay = selected) }
+                            },
+                        )
+                    }
                 }
             }
         }

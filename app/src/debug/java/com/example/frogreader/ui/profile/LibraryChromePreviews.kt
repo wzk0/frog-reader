@@ -53,7 +53,7 @@ private fun LargeTextLibraryChromePreview() = LibraryChrome(AppTheme.WHITE, expa
 @Preview(name = "Library · list", widthDp = 393, heightDp = 852, showSystemUi = true)
 @Preview(name = "Library · list · large text", widthDp = 360, heightDp = 800, showSystemUi = true, fontScale = 1.5f)
 @Composable
-private fun ListLibraryChromePreview() = LibraryChrome(AppTheme.WHITE, expanded = false, mode = LibraryViewMode.LIST)
+private fun FixedHeightListLibraryChromePreview() = LibraryChrome(AppTheme.WHITE, expanded = false, mode = LibraryViewMode.LIST)
 
 @Preview(name = "Beige · library grid", widthDp = 393, heightDp = 882, showSystemUi = true)
 @Composable

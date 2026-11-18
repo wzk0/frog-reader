@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import com.example.frogreader.ui.components.FlatDropdownMenu as DropdownMenu
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -90,8 +91,8 @@ internal fun ReadingLogBookFields(
                     }
                 }
             }
-            DropdownMenu(coverMenu && enabled, { coverMenu = false }, containerColor = colors.floatingSurface,
-                tonalElevation = 0.dp, shape = RoundedCornerShape(16.dp)) {
+            DropdownMenu(coverMenu && enabled, { coverMenu = false },
+                tonalElevation = 0.dp) {
                 DropdownMenuItem(text = { Text(stringResource(R.string.reading_log_cover_gallery)) },
                     leadingIcon = { Icon(Icons.Rounded.PhotoLibrary, null) }, onClick = { coverMenu = false; onGallery() })
                 DropdownMenuItem(text = { Text(stringResource(R.string.reading_log_cover_camera)) },

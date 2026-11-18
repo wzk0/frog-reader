@@ -240,11 +240,15 @@ data class Book(
 /** How the books inside one shelf are ordered. */
 @Serializable
 enum class ShelfSortMode {
+    FOLLOW_LIBRARY,
+
     /** The order the shelf keeps: newest addition first, opened member to the front. */
     RECENT,
 
     /** By the name the book has in the user's own folder, A→Z. */
     FILENAME,
+
+    FOLDER,
 }
 
 /**
@@ -262,11 +266,8 @@ data class Shelf(
      */
     val bookIds: List<String> = emptyList(),
     val createdAtMillis: Long,
-    /**
-     * This shelf's own reading order. Defaulted: shelves written before this
-     * existed keep their historical order (they are [ShelfSortMode.RECENT]).
-     */
-    val sortMode: ShelfSortMode = ShelfSortMode.RECENT,
+    /** Existing explicit choices remain valid; absent values follow the library. */
+    val sortMode: ShelfSortMode = ShelfSortMode.FOLLOW_LIBRARY,
     /**
      * Ordering timestamp in the same space as a book's
      * `lastOpenedAtMillis ?: addedAtMillis`, seeded from the drop target so a
@@ -278,6 +279,8 @@ data class Shelf(
      */
     val sortKey: Long = 0L,
     override val updatedAtMillis: Long = 0L,
+    /** Older files wrote RECENT by default, so only newer choices can distinguish an override. */
+    val sortModeExplicit: Boolean = false,
 ) : Timestamped<Shelf> {
     override fun withUpdatedAt(millis: Long) = copy(updatedAtMillis = millis)
 }

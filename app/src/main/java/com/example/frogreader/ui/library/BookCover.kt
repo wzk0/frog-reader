@@ -17,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.PlatformTextStyle
@@ -218,7 +217,6 @@ private const val CaptionVeilFoot = 0.84f
  * thin strokes of 10sp type fighting the picture behind them.
  */
 private val CaptionStyle = TextStyle(
-    shadow = Shadow(color = CoverCaptionScrim.copy(alpha = 0.45f), blurRadius = 6f),
     platformStyle = PlatformTextStyle(includeFontPadding = false),
     lineHeightStyle = LineHeightStyle(
         alignment = LineHeightStyle.Alignment.Center,

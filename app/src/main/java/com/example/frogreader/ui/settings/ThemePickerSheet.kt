@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.settings
 
+import com.example.frogreader.ui.theme.floatingSurface
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -57,7 +58,7 @@ fun ThemePickerSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         shape = RoundedCornerShape(topStart = 34.dp, topEnd = 34.dp),
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+        containerColor = MaterialTheme.colorScheme.floatingSurface,
         dragHandle = {
             Box(
                 modifier = Modifier

@@ -58,13 +58,14 @@ class LibraryViewModel(
 
     val books: StateFlow<List<Book>> = repository.books
     val readingQueue = repository.readingQueue
+    private val _sortMode = MutableStateFlow(LibrarySortMode.RECENT)
 
     /**
      * The grid's single source of truth: loose books and shelves in one order.
      * Kept separate from [books], which the widget and stats still read raw.
      */
     val entries: StateFlow<List<LibraryEntry>> =
-        combine(repository.books, repository.shelves, ::buildEntries)
+        combine(repository.books, repository.shelves, _sortMode, ::buildEntries)
             .stateIn(
                 scope = viewModelScope,
                 started = SharingStarted.WhileSubscribed(5_000),
@@ -94,8 +95,6 @@ class LibraryViewModel(
     fun toggleViewMode() {
         setViewMode(if (_viewMode.value == LibraryViewMode.GRID) LibraryViewMode.LIST else LibraryViewMode.GRID)
     }
-
-    private val _sortMode = MutableStateFlow(LibrarySortMode.RECENT)
 
     /**
      * How the grid is ordered: by recency (the original behaviour), by the

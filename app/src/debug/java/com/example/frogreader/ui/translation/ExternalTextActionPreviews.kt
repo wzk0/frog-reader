@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.translation
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,10 +19,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -33,8 +33,8 @@ import com.example.frogreader.data.translation.ExternalTextAction
 import com.example.frogreader.data.translation.ExternalTextApp
 import com.example.frogreader.data.translation.TextIntentMechanism
 import com.example.frogreader.ui.settings.ExternalTextActionSettingsRow
-import com.example.frogreader.ui.settings.SettingsCard
-import com.example.frogreader.ui.settings.SettingsDivider
+import com.example.frogreader.ui.settings.SettingsCardRow
+import com.example.frogreader.ui.settings.SettingsRows
 import com.example.frogreader.ui.theme.FrogReaderTheme
 import com.example.frogreader.ui.theme.floatingSurface
 
@@ -145,20 +145,21 @@ private fun SettingsPreview(theme: AppTheme) {
             Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)
                 .verticalScroll(rememberScrollState()).padding(16.dp),
         ) {
-            SettingsCard {
+            SettingsRows {
                 ExternalTextAction.entries.forEachIndexed { index, action ->
-                    if (index > 0) SettingsDivider()
-                    ExternalTextActionSettingsRow(
-                        action = action,
-                        selectedLabel = stringResource(
-                            when (action) {
-                                ExternalTextAction.TRANSLATE -> R.string.external_text_ask_every_time
-                                ExternalTextAction.DEFINE -> R.string.external_text_not_selected
-                                ExternalTextAction.SEARCH -> R.string.external_text_unavailable
-                            },
-                        ),
-                        onClick = {},
-                    )
+                    SettingsCardRow(first = index == 0, last = index == ExternalTextAction.entries.lastIndex) {
+                        ExternalTextActionSettingsRow(
+                            action = action,
+                            selectedLabel = stringResource(
+                                when (action) {
+                                    ExternalTextAction.TRANSLATE -> R.string.external_text_ask_every_time
+                                    ExternalTextAction.DEFINE -> R.string.external_text_not_selected
+                                    ExternalTextAction.SEARCH -> R.string.external_text_unavailable
+                                },
+                            ),
+                            onClick = {},
+                        )
+                    }
                 }
             }
         }

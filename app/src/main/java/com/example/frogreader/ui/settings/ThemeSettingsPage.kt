@@ -46,9 +46,7 @@ internal fun ThemeSettingsPage(
 
             Spacer(Modifier.height(24.dp))
             SettingsSectionLabel(stringResource(R.string.settings_theme_automatic))
-            SettingsCard {
-                ThemeAutomaticControls(settings = settings, onUpdate = onUpdate)
-            }
+            ThemeAutomaticControls(settings = settings, onUpdate = onUpdate)
 
             SettingsHelper(
                 when {

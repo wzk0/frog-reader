@@ -1,5 +1,8 @@
 package com.example.frogreader.ui.profile
 
+import com.example.frogreader.ui.components.cardSurface
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.ConnectedCardGap
 import com.example.frogreader.ui.components.FrogSnackbarHost
 import com.example.frogreader.ui.components.FrogSegmentedControl
 import android.content.Intent
@@ -7,12 +10,10 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import com.example.frogreader.ui.components.FlatDropdownMenu as DropdownMenu
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -209,7 +211,7 @@ internal fun QuotesAndBookmarksContent(
                     LazyColumn(
                         state = bookListState, modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 24.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(ConnectedCardGap),
                     ) {
                         if (collection.isNotEmpty()) item("heading") {
                             CollectionLabel(stringResource(R.string.quotes_bookmarks_books_label))
@@ -217,8 +219,8 @@ internal fun QuotesAndBookmarksContent(
                         if (collection.isEmpty()) item("empty") {
                             EmptyQuotesAndBookmarks(libraryQuery, R.string.quotes_bookmarks_empty_collection, R.string.quotes_bookmarks_empty_collection_hint)
                         }
-                        items(collection, key = { it.id }) { savedBook ->
-                            SavedBookCard(savedBook, coverOf) { selectedBookId = savedBook.id }
+                        itemsIndexed(collection, key = { _, item -> item.id }) { index, savedBook ->
+                            SavedBookCard(savedBook, coverOf, Modifier.animateItem(), connectedCardShape(index, collection.size)) { selectedBookId = savedBook.id }
                         }
                     }
                 } else key(book.id) {
@@ -276,7 +278,7 @@ internal fun QuotesAndBookmarksContent(
                             LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 24.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(ConnectedCardGap),
                             ) {
                                 if (book.fileName == null) item("missing") {
                                     MissingBookHint { leaveEditor { onBookInfo(book.id) } }
@@ -304,7 +306,7 @@ internal fun QuotesAndBookmarksContent(
                                     if (annotations.quotes.isEmpty()) item("empty") {
                                         EmptyQuotesAndBookmarks(bookQuery, R.string.quotes_bookmarks_empty_book_quotes, R.string.quotes_bookmarks_empty_quotes_hint)
                                     }
-                                    items(annotations.quotes, key = { "quote:${it.id}" }) { quote ->
+                                    itemsIndexed(annotations.quotes, key = { _, item -> "quote:${item.id}" }) { index, quote ->
                                         QuoteCard(
                                             book, quote, editor?.takeIf { it.bookId == book.id && it.quoteId == quote.id },
                                             busy = busy || editor?.saving == true,
@@ -313,6 +315,8 @@ internal fun QuotesAndBookmarksContent(
                                             onCancel = { leaveEditor {} },
                                             onOpen = { leaveEditor { onOpenQuoteOrBookmark(book.id, quote.id, null) } },
                                             onDelete = { leaveEditor { onDeleteQuote(book, quote) } },
+                                            modifier = Modifier.animateItem(),
+                                            shape = connectedCardShape(index, annotations.quotes.size),
                                         )
                                     }
                                 } else {
@@ -322,12 +326,14 @@ internal fun QuotesAndBookmarksContent(
                                     if (annotations.bookmarks.isEmpty()) item("empty") {
                                         EmptyQuotesAndBookmarks(bookQuery, R.string.quotes_bookmarks_empty_book_bookmarks, R.string.quotes_bookmarks_empty_bookmarks_hint)
                                     }
-                                    items(annotations.bookmarks, key = { "bookmark:${it.bookmark.id}" }) { entry ->
+                                    itemsIndexed(annotations.bookmarks, key = { _, item -> "bookmark:${item.bookmark.id}" }) { index, entry ->
                                         BookmarkCard(
                                             entry, busy,
                                             onOpen = { onOpenQuoteOrBookmark(book.id, null, entry.bookmark.id) },
                                             onBookInfo = { onBookInfo(book.id) },
                                             onDelete = { onDeleteBookmark(book, entry.bookmark) },
+                                            modifier = Modifier.animateItem(),
+                                            shape = connectedCardShape(index, annotations.bookmarks.size),
                                         )
                                     }
                                 }
@@ -401,9 +407,9 @@ private fun AnnotationBookCover(book: Book, coverOf: (Book) -> File?, width: Dp 
 }
 
 @Composable
-private fun SavedBookCard(book: Book, coverOf: (Book) -> File?, onClick: () -> Unit) {
+private fun SavedBookCard(book: Book, coverOf: (Book) -> File?, modifier: Modifier, shape: RoundedCornerShape, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    Card(onClick = onClick, shape = RoundedCornerShape(18.dp), colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerLowest)) {
+    Card(onClick = onClick, modifier = modifier, shape = shape, colors = CardDefaults.cardColors(containerColor = colors.cardSurface)) {
         Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             AnnotationBookCover(book, coverOf, width = 38.dp, height = 54.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -446,6 +452,7 @@ private fun QuoteCard(
     book: Book, quote: Quote, editor: QuoteThoughtEditor?, busy: Boolean,
     onEdit: () -> Unit, onThoughtChange: (String) -> Unit, onSave: () -> Unit,
     onCancel: () -> Unit, onOpen: () -> Unit, onDelete: () -> Unit,
+    modifier: Modifier, shape: RoundedCornerShape,
 ) {
     val colors = MaterialTheme.colorScheme
     val clipboard = LocalClipboard.current
@@ -460,9 +467,9 @@ private fun QuoteCard(
         formatQuoteForCopy(quote.text, book.title, book.author)
     }
     Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerLowest),
-        modifier = Modifier.clickable(
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = colors.cardSurface),
+        modifier = modifier.clip(shape).clickable(
             enabled = canToggleExpand && editor == null,
             interactionSource = remember { MutableInteractionSource() },
             indication = null,
@@ -500,7 +507,7 @@ private fun QuoteCard(
                         IconButton(onClick = { showMenu = true }, modifier = Modifier.size(30.dp)) {
                             Icon(Icons.Rounded.MoreVert, stringResource(R.string.quotes_bookmarks_actions), Modifier.size(18.dp))
                         }
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, containerColor = colors.floatingSurface) {
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             DropdownMenuItem(text = { Text(stringResource(R.string.selection_copy)) },
                                 leadingIcon = { Icon(Icons.Rounded.ContentCopy, null) },
                                 onClick = {
@@ -631,13 +638,14 @@ private fun ThoughtEditor(editor: QuoteThoughtEditor, onChange: (String) -> Unit
 private fun BookmarkCard(
     entry: SavedBookmark, busy: Boolean,
     onOpen: () -> Unit, onBookInfo: () -> Unit, onDelete: () -> Unit,
+    modifier: Modifier, shape: RoundedCornerShape,
 ) {
     val (book, bookmark) = entry
     val colors = MaterialTheme.colorScheme
     var showMenu by remember { mutableStateOf(false) }
     val canOpen = book.fileName != null && !bookmark.orphaned && bookmark.flatIndex >= 0
-    Card(onClick = { if (canOpen) onOpen() else onBookInfo() }, shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = colors.surfaceContainerLowest)) {
+    Card(onClick = { if (canOpen) onOpen() else onBookInfo() }, shape = shape, modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = colors.cardSurface)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 0.dp) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -652,7 +660,7 @@ private fun BookmarkCard(
                         IconButton(onClick = { showMenu = true }, modifier = Modifier.size(30.dp)) {
                             Icon(Icons.Rounded.MoreVert, stringResource(R.string.quotes_bookmarks_actions), Modifier.size(18.dp))
                         }
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }, containerColor = colors.floatingSurface) {
+                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                             DropdownMenuItem(text = { Text(stringResource(R.string.reader_font_delete), color = colors.error) }, enabled = !busy,
                                 leadingIcon = { Icon(Icons.Rounded.DeleteOutline, null, tint = colors.error) },
                                 onClick = { showMenu = false; onDelete() })

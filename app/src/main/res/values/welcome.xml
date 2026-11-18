@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="welcome_title">欢迎使用\nFrog Reader</string>
+    <string name="welcome_title">欢迎使用\n青蛙阅读</string>
     <string name="welcome_subtitle">选择几项偏好即可开始。之后可以在设置中随时更改。</string>
     <string name="welcome_controls_title">阅读控件</string>
     <string name="welcome_controls_subtitle">选择阅读器布局</string>
-    <string name="welcome_startup_subtitle">Frog Reader 的起始页面</string>
+    <string name="welcome_startup_subtitle">青蛙阅读 的起始页面</string>
     <string name="welcome_theme_title">主题</string>
     <string name="welcome_theme_subtitle">选择书库的外观</string>
     <string name="welcome_continue">继续</string>

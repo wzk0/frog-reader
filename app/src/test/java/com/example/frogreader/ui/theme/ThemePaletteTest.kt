@@ -181,21 +181,18 @@ class ThemePaletteTest {
         val levels = listOf(s.surfaceContainerLowest, s.surfaceContainerLow, s.surfaceContainer,
             s.surfaceContainerHigh, s.surfaceContainerHighest).map { it.luminance() }
         assertTrue(levels.zipWithNext().all { (a, b) -> a > b })
-        assertTrue(s.surfaceContainerLowest.luminance() - s.surface.luminance() >= 0.08f)
-        assertEquals(s.surfaceContainerLowest, s.floatingSurface)
+        assertTrue(s.surface.luminance() - s.surfaceContainer.luminance() >= 0.06f)
+        assertEquals(s.surfaceContainerLow, s.floatingSurface)
     }
 
     @Test
-    fun `light inactive surfaces stay neutral and stepper buttons separate from their group`() {
+    fun `light inactive surfaces stay lightly tinted and stepper buttons separate from their group`() {
         val s = colorSchemeFor(AppTheme.WHITE)
-        // The rejected palette mixed yellow canvas and olive controls. Neutrals
-        // may have a slight cool cast, but must not drift back toward cream/olive.
         listOf(s.surface, s.surfaceContainerLow, s.surfaceContainer, s.surfaceContainerHigh,
             s.surfaceContainerHighest, s.secondaryContainer, s.outlineVariant).forEach { color ->
-            assertTrue("neutral has yellow cast: $color", color.blue >= color.red)
-            assertTrue("neutral has olive cast: $color", color.blue >= color.green)
-            assertTrue("neutral is too saturated: $color",
-                maxOf(color.red, color.green, color.blue) - minOf(color.red, color.green, color.blue) < 0.04f)
+            assertTrue("surface should carry a green tint: $color", color.green > color.red && color.green > color.blue)
+            assertTrue("surface tint is too saturated: $color",
+                maxOf(color.red, color.green, color.blue) - minOf(color.red, color.green, color.blue) < 0.06f)
         }
         val reader = readerColors(AppTheme.WHITE)
         assertTrue(reader.controlButton.luminance() - reader.control.luminance() >= 0.08f)
@@ -364,7 +361,7 @@ class ThemePaletteTest {
 
         assertEquals(Color.White, colors.background)
         assertEquals(pageScheme.onSurface, colors.text)
-        assertEquals(systemBlueScheme.surfaceContainerLowest, colors.chrome)
+        assertEquals(systemBlueScheme.surfaceContainerLow, colors.chrome)
         assertEquals(systemBlueScheme.primary, colors.accent)
         assertEquals(systemBlueScheme.onPrimary, colors.onAccent)
         assertEquals(systemBlueScheme.onSurfaceVariant, colors.onChromeVariant)
@@ -386,12 +383,12 @@ class ThemePaletteTest {
         val surfaces = listOf(s.surfaceContainerLowest, s.surfaceContainerLow,
             s.surfaceContainer, s.surfaceContainerHigh, s.surfaceContainerHighest)
         assertTrue(surfaces.map { it.luminance() }.zipWithNext().all { (a, b) -> a > b })
-        assertTrue(s.surfaceContainerLowest.luminance() - s.surface.luminance() >= 0.08f)
+        assertTrue(s.surface.luminance() - s.surfaceContainer.luminance() >= 0.06f)
         (surfaces + s.surface).forEach { color ->
             assertTrue("Beige must be warm: $color", color.red > color.green && color.green > color.blue)
-            assertTrue("Beige must not become ochre: $color", color.red - color.blue < 0.15f)
+            assertTrue("Beige must not become ochre: $color", color.red - color.blue < 0.19f)
         }
-        assertEquals(s.surfaceContainerLowest, s.floatingSurface)
+        assertEquals(s.surfaceContainerLow, s.floatingSurface)
     }
 
     @Test

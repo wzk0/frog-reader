@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import com.example.frogreader.ui.components.FlatDropdownMenu as DropdownMenu
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -25,7 +26,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import com.example.frogreader.R
-import com.example.frogreader.data.model.ReadingLogDate
 import com.example.frogreader.data.model.ReadingLogSource
 import com.example.frogreader.data.model.ReadingLogStatus
 import com.example.frogreader.ui.library.BookIdentityHeader
@@ -81,7 +81,7 @@ internal fun ReadingLogEditorForm(
                                 ReadingLogDetailControl(stringResource(R.string.reading_log_source),
                                     stringResource(sourceLabel(draft.source)),
                                     enabled = !busy, icon = Icons.Rounded.ExpandMore, click = { focus.clearFocus(); sourceMenu = true })
-                                DropdownMenu(sourceMenu, { sourceMenu = false }, containerColor = colors.floatingSurface, tonalElevation = 0.dp) {
+                                DropdownMenu(sourceMenu, { sourceMenu = false }, tonalElevation = 0.dp) {
                                     listOf(ReadingLogSource.PAPER, ReadingLogSource.EXTERNAL).forEach { source ->
                                         DropdownMenuItem(text = { Text(stringResource(sourceLabel(source))) },
                                             trailingIcon = { if (draft.source == source) Icon(Icons.Rounded.Check, null) },
@@ -93,7 +93,7 @@ internal fun ReadingLogEditorForm(
                             Box(modifier) {
                                 ReadingLogDetailControl(stringResource(R.string.reading_log_status_short), stringResource(statusLabel(draft.status)),
                                     enabled = !busy, icon = Icons.Rounded.ExpandMore, click = { focus.clearFocus(); statusMenu = true })
-                                DropdownMenu(statusMenu, { statusMenu = false }, containerColor = colors.floatingSurface, tonalElevation = 0.dp) {
+                                DropdownMenu(statusMenu, { statusMenu = false }, tonalElevation = 0.dp) {
                                     ReadingLogStatus.entries.forEach { status -> DropdownMenuItem(text = { Text(stringResource(statusLabel(status))) },
                                         trailingIcon = { if (draft.status == status) Icon(Icons.Rounded.Check, null) }, onClick = {
                                             statusMenu = false

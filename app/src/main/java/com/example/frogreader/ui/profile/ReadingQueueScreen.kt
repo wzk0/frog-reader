@@ -1,5 +1,8 @@
 package com.example.frogreader.ui.profile
 
+import com.example.frogreader.ui.components.cardSurface
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.ConnectedCardGap
 import com.example.frogreader.ui.components.FrogSnackbarHost
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -8,7 +11,6 @@ import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -31,6 +33,7 @@ import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.automirrored.rounded.Notes
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import com.example.frogreader.ui.components.FlatDropdownMenu as DropdownMenu
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -277,7 +280,7 @@ internal fun ReadingQueueContent(
             else LazyColumn(
                 state = list, modifier = Modifier.fillMaxSize(), userScrollEnabled = drag.id == null,
                 contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(ConnectedCardGap),
             ) {
                 item("queue-label") {
                     FlowRow(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
@@ -301,6 +304,7 @@ internal fun ReadingQueueContent(
                     }
                 }
                 itemsIndexed(entries, key = { _, entry -> entry.id }, contentType = { _, _ -> "reading_intention" }) { index, entry ->
+                    val rowShape = connectedCardShape(index, entries.size)
                     val held = drag.id == entry.id
                     val lift by animateFloatAsState(if (held) 1f else 0f, spring(stiffness = 650f), label = "card lift")
                     // Store the last painted viewport position without scheduling recomposition per frame.
@@ -347,7 +351,6 @@ internal fun ReadingQueueContent(
                             }
                             if (slot != null) paintedTop[0] = slot + translationY
                             scaleX = 1f + .012f * lift; scaleY = 1f + .012f * lift
-                            shadowElevation = 8.dp.toPx() * lift; shape = RoundedCornerShape(24.dp)
                         }.animateContentSize(spring(stiffness = 650f))) {
                         SwipeToDismissBox(
                             state = swipe,
@@ -369,7 +372,7 @@ internal fun ReadingQueueContent(
                             backgroundContent = {
                                 val reading = swipe.dismissDirection == SwipeToDismissBoxValue.StartToEnd
                                 val foreground = if (reading) colors.onPrimaryContainer else colors.onErrorContainer
-                                Row(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp))
+                                Row(Modifier.fillMaxSize().clip(rowShape)
                                     .background(if (reading) colors.primaryContainer else colors.errorContainer)
                                     .padding(horizontal = 22.dp), verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = if (reading) Arrangement.Start else Arrangement.End) {
@@ -487,11 +490,8 @@ private fun ReadingQueueCard(
     val displayNote = remember(entry.note) { entry.note.replace(Regex("\\s+"), " ").trim() }
     Surface(
         onClick = onEdit, enabled = enabled || held,
-        shape = RoundedCornerShape(24.dp),
-        color = colors.surfaceContainerLowest,
-        border = when { held -> BorderStroke(1.dp, colors.primary)
-            index == 0 -> BorderStroke(1.dp, colors.primary.copy(alpha = .16f))
-            else -> null },
+        shape = connectedCardShape(index, count),
+        color = if (held) colors.secondaryContainer else colors.cardSurface,
         modifier = Modifier.fillMaxWidth().onGloballyPositioned { cardTop = it.positionInRoot().y }.semantics {
             stateDescription = position
             customActions = buildList {
@@ -537,7 +537,7 @@ private fun ReadingQueueCard(
                         IconButton(onClick = { menu = true }, enabled = enabled, modifier = Modifier.size(48.dp)) {
                             Icon(Icons.Rounded.MoreVert, stringResource(R.string.reading_queue_more), Modifier.size(20.dp).offset(x = 4.dp))
                         }
-                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }, containerColor = colors.floatingSurface) {
+                        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                             DropdownMenuItem(text = { Text(stringResource(R.string.reading_queue_edit)) },
                                 leadingIcon = { Icon(Icons.Rounded.Edit, null) }, onClick = { menu = false; onEdit() })
                             DropdownMenuItem(text = { Text(readAction) },
@@ -670,7 +670,7 @@ private fun ReadingQueueEditorField(
             decorationBox = { input ->
                 Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)
                     .background(colors.surfaceContainer, shape)
-                    .border(1.5.dp, if (enabled && (focused || errorMessage != null)) accent else Color.Transparent, shape)
+                    .border(1.5.dp, if (enabled && (focused || errorMessage != null)) accent else colors.outlineVariant, shape)
                     .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -718,8 +718,7 @@ private fun ReadingQueueEditorActions(editor: ReadingQueueEditor, busy: Boolean,
                 Text(if (attached == null) stringResource(R.string.reading_queue_add_file)
                     else stringResource(R.string.reading_queue_file_attached, attached.format.name))
             }
-            DropdownMenu(expanded = attachmentMenu && !busy, onDismissRequest = { attachmentMenu = false },
-                containerColor = colors.floatingSurface) {
+            DropdownMenu(expanded = attachmentMenu && !busy, onDismissRequest = { attachmentMenu = false }) {
                 Text(attached?.title.orEmpty(), Modifier.widthIn(max = 280.dp).padding(horizontal = 16.dp, vertical = 8.dp),
                     style = MaterialTheme.typography.titleSmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(stringResource(R.string.reading_queue_file_private),

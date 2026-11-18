@@ -14,6 +14,7 @@ import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material3.*
+import com.example.frogreader.ui.components.FlatDropdownMenu as DropdownMenu
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,8 +73,7 @@ internal fun BookIdentityHeader(
                     Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Edit, null, Modifier.size(16.dp)) }
                 }
             }
-            DropdownMenu(menu && enabled, { menu = false }, shape = RoundedCornerShape(20.dp),
-                containerColor = colors.floatingSurface, tonalElevation = 0.dp) {
+            DropdownMenu(menu && enabled, { menu = false }, tonalElevation = 0.dp) {
                 onPhotographCover?.let { photograph -> DropdownMenuItem(text = { Text(stringResource(R.string.reading_log_camera)) },
                     leadingIcon = { Icon(Icons.Rounded.CameraAlt, null) }, onClick = { menu = false; photograph() }) }
                 onChangeCover?.let { change -> DropdownMenuItem(text = { Text(changeLabel) },

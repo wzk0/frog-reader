@@ -14,7 +14,7 @@ import com.example.frogreader.ui.nav.NavTab
 import com.example.frogreader.ui.theme.FrogReaderTheme
 import java.time.LocalDate
 
-@Preview(name = "393dp · compact profile", widthDp = 393, heightDp = 852, showSystemUi = true)
+@Preview(name = "393dp · larger profile shortcuts", widthDp = 393, heightDp = 852, showSystemUi = true)
 @Composable
 private fun CompactProfilePreview() = ProfilePreview("Гном Гномыч", AppTheme.WHITE)
 

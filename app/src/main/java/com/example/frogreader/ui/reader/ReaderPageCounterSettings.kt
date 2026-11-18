@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.reader
 
+import com.example.frogreader.ui.components.ConnectedCardGap
+import com.example.frogreader.ui.components.connectedCardShape
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
@@ -94,11 +96,12 @@ internal fun ReaderPageCounterSettings(
 ) {
     val paged = settings.readingMode == ReadingMode.PAGES
     val haptics = LocalHapticFeedback.current
-    Column(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(colors.control),
-    ) {
+    val showStyle = paged && settings.showPageCounter
+    Column(Modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth()
+                .clip(connectedCardShape(last = !showStyle))
+                .background(colors.control)
                 .toggleable(
                     value = settings.showPageCounter,
                     enabled = paged,
@@ -142,8 +145,13 @@ internal fun ReaderPageCounterSettings(
                 ),
             )
         }
-        AnimatedVisibility(paged && settings.showPageCounter) {
-            Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+        AnimatedVisibility(showStyle) {
+            Column(
+                Modifier.fillMaxWidth().padding(top = ConnectedCardGap)
+                    .clip(connectedCardShape(first = false))
+                    .background(colors.control)
+                    .padding(start = 12.dp, top = 10.dp, end = 12.dp, bottom = 12.dp),
+            ) {
                 Text(
                     stringResource(R.string.reader_counter_style),
                     style = MaterialTheme.typography.labelLarge,

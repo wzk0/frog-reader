@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.profile
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import com.example.frogreader.ui.components.FrogSnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarDuration
@@ -10,7 +12,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -53,11 +54,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -331,7 +330,6 @@ internal fun ProfileCard(
     val changeAvatarLabel = stringResource(R.string.profile_photo_change)
     Surface(
         shape = RoundedCornerShape(FrogHeroCorner),
-        shadowElevation = 2.dp,
         color = frog.profileBottom,
         contentColor = frog.onProfile,
         modifier = Modifier.fillMaxWidth(),
@@ -412,7 +410,6 @@ internal fun ProfileCard(
                     iconColor = frog.profileLandscape.actionIcon,
                     iconBackground = frog.profileLandscape.actionIconBackground,
                     secondaryColor = frog.profileLandscape.actionSecondary,
-                    border = BorderStroke(1.dp, frog.profileLandscape.actionBorder),
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     onClick = onOpenAchievements ?: {},
                     enabled = false,
@@ -426,7 +423,6 @@ internal fun ProfileCard(
                     iconColor = frog.profileLandscape.actionIcon,
                     iconBackground = frog.profileLandscape.actionIconBackground,
                     secondaryColor = frog.profileLandscape.actionSecondary,
-                    border = BorderStroke(1.dp, frog.profileLandscape.actionBorder),
                     modifier = Modifier.weight(1f).fillMaxHeight(),
                     onClick = onOpenStats,
                     enabled = false,
@@ -449,7 +445,6 @@ private fun ProfileActionTile(
     secondaryColor: Color,
     onClick: () -> Unit,
     enabled: Boolean = true,
-    border: BorderStroke? = null,
 ) {
     Surface(
         onClick = onClick,
@@ -458,7 +453,6 @@ private fun ProfileActionTile(
         shape = RoundedCornerShape(16.dp),
         color = color,
         contentColor = contentColor,
-        border = border,
     ) {
         Row(
             modifier = Modifier

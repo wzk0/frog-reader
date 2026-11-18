@@ -1,5 +1,6 @@
 package com.example.frogreader.ui
 
+import com.example.frogreader.data.LibrarySortMode
 import com.example.frogreader.data.model.Book
 import com.example.frogreader.data.model.BookFormat
 import com.example.frogreader.data.model.Shelf
@@ -134,6 +135,19 @@ class LibraryEntriesTest {
         val entry = buildEntries(books, listOf(shelf)).filterIsInstance<LibraryEntry.ShelfEntry>().single()
 
         assertEquals(listOf("c", "a", "b"), entry.books.map { it.id })
+    }
+
+    @Test
+    fun `legacy defaults inherit file name order and explicit recency overrides it`() {
+        val books = listOf(book("recent", 200, "10.epub"), book("first", 100, "02.epub"))
+        val shelf = Shelf(id = "s1", bookIds = books.map { it.id }, createdAtMillis = 5, sortMode = ShelfSortMode.RECENT)
+
+        val inherited = buildEntries(books, listOf(shelf), LibrarySortMode.FILENAME).single() as LibraryEntry.ShelfEntry
+        val overridden = buildEntries(books, listOf(shelf.copy(sortModeExplicit = true)), LibrarySortMode.FILENAME)
+            .single() as LibraryEntry.ShelfEntry
+
+        assertEquals(listOf("first", "recent"), inherited.books.map { it.id })
+        assertEquals(listOf("recent", "first"), overridden.books.map { it.id })
     }
 
     @Test

@@ -1,5 +1,8 @@
 package com.example.frogreader.ui.settings
 
+import com.example.frogreader.ui.theme.floatingContentSurface
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import android.content.ClipData
 import android.content.Intent
 import androidx.compose.foundation.background
@@ -30,7 +33,6 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.LocalOffer
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -38,11 +40,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
@@ -238,7 +238,6 @@ private fun AboutContent(
         shape = RoundedCornerShape(28.dp),
         color = colors.floatingSurface,
         tonalElevation = 0.dp,
-        shadowElevation = 6.dp,
     ) {
         Column(Modifier.padding(18.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
@@ -261,7 +260,7 @@ private fun AboutContent(
                 }
                 IconButton(
                     onClick = onDismiss,
-                    modifier = Modifier.size(44.dp).background(colors.surfaceContainerHigh, CircleShape),
+                    modifier = Modifier.size(44.dp).background(colors.floatingContentSurface, CircleShape),
                 ) {
                     Icon(Icons.Rounded.Close, stringResource(R.string.settings_close), Modifier.size(22.dp))
                 }
@@ -337,7 +336,7 @@ private fun AboutSupportCard(link: AboutLink, onClick: () -> Unit, modifier: Mod
         onClick = onClick,
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
-        color = colors.surfaceContainer,
+        color = colors.floatingContentSurface,
         tonalElevation = 0.dp,
     ) {
         Column(
@@ -367,19 +366,19 @@ private fun AboutSupportCard(link: AboutLink, onClick: () -> Unit, modifier: Mod
 @Composable
 private fun AboutProject(onOpenLink: (String) -> Unit) {
     AboutSectionTitle(stringResource(R.string.settings_about_project))
-    AboutActionSurface {
+    SettingsRows {
         projectLinks.forEachIndexed { index, link ->
-            if (index > 0) {
-                HorizontalDivider(
-                    Modifier.padding(start = 60.dp, end = 12.dp),
-                    color = MaterialTheme.colorScheme.outlineVariant,
+            SettingsCardRow(
+                first = index == 0,
+                last = index == projectLinks.lastIndex,
+                containerColor = MaterialTheme.colorScheme.floatingContentSurface,
+            ) {
+                AboutActionRow(
+                    title = stringResource(link.title), subtitle = stringResource(link.subtitle),
+                    icon = { AboutLinkIcon(link, Modifier.size(22.dp)) },
+                    onClick = { onOpenLink(link.uri) },
                 )
             }
-            AboutActionRow(
-                title = stringResource(link.title), subtitle = stringResource(link.subtitle),
-                icon = { AboutLinkIcon(link, Modifier.size(22.dp)) },
-                onClick = { onOpenLink(link.uri) },
-            )
         }
     }
 }
@@ -387,7 +386,7 @@ private fun AboutProject(onOpenLink: (String) -> Unit) {
 @Composable
 private fun AboutUpdates(onOpenLink: (String) -> Unit) {
     AboutSectionTitle(stringResource(R.string.settings_about_updates))
-    AboutActionSurface {
+    SettingsCardRow(containerColor = MaterialTheme.colorScheme.floatingContentSurface) {
         AboutActionRow(
             title = stringResource(channelLink.title), subtitle = stringResource(channelLink.subtitle),
             icon = { AboutLinkIcon(channelLink, Modifier.size(22.dp)) },
@@ -410,7 +409,7 @@ private fun AboutSectionTitle(title: String) {
 private fun AboutActionSurface(content: @Composable () -> Unit) {
     Surface(
         Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer, tonalElevation = 0.dp,
+        color = MaterialTheme.colorScheme.floatingContentSurface, tonalElevation = 0.dp,
     ) { Column { content() } }
 }
 

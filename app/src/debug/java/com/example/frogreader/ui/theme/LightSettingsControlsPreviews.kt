@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.example.frogreader.ui.components.connectedCardShape
 import com.example.frogreader.data.AppSettings
 import com.example.frogreader.data.AppTheme
 import com.example.frogreader.data.BackupFrequency
@@ -20,7 +21,8 @@ import com.example.frogreader.ui.settings.BackupViewModel
 import com.example.frogreader.ui.settings.SettingsPageScaffold
 import com.example.frogreader.ui.settings.SettingsCard
 import com.example.frogreader.ui.settings.SettingsControlRow
-import com.example.frogreader.ui.settings.SettingsDivider
+import com.example.frogreader.ui.settings.SettingsRows
+import com.example.frogreader.ui.settings.SettingsCardRow
 import com.example.frogreader.ui.settings.SettingsSectionLabel
 import com.example.frogreader.ui.settings.SettingsHelper
 
@@ -62,22 +64,23 @@ private fun BackupControlsPreview(theme: AppTheme, mode: BackupMode) {
             )
             Spacer(Modifier.height(24.dp))
             SettingsSectionLabel("Back up now includes")
-            SettingsCard {
-                BackupScopeRow(mode == BackupMode.DATA, "Data only", "Reading Log with covers, Reading Queue, notes, progress and settings", "Small", true, {})
-                BackupScopeRow(mode == BackupMode.FULL, "Data and books", "The same, plus every book file and cover", "~359 MB", true, {})
+            SettingsRows {
+                BackupScopeRow(mode == BackupMode.DATA, "Data only", "Reading Log with covers, Reading Queue, notes, progress and settings", "Small", true, {}, connectedCardShape(last = false))
+                BackupScopeRow(mode == BackupMode.FULL, "Data and books", "The same, plus every book file and cover", "~359 MB", true, {}, connectedCardShape(first = false))
             }
             SettingsHelper("Automatic backups always use Data only, avoiding large background transfers.")
             Spacer(Modifier.height(24.dp))
             SettingsSectionLabel("Automatic backups")
-            SettingsCard {
-                BackupFolderRow(folder = null, enabled = true, onChange = {})
-                SettingsDivider()
-                SettingsControlRow(
+            SettingsRows {
+                SettingsCardRow(last = false) { BackupFolderRow(folder = null, enabled = true, onChange = {}) }
+                SettingsCardRow(first = false) {
+                    SettingsControlRow(
                     icon = Icons.Rounded.Schedule, title = "How often", subtitle = "The 5 most recent backups are kept",
                     selected = BackupFrequency.OFF,
                     options = listOf(BackupFrequency.OFF to "Off", BackupFrequency.DAILY to "Daily", BackupFrequency.WEEKLY to "Weekly"),
-                    onSelected = {}, enabled = false,
-                )
+                        onSelected = {}, enabled = false,
+                    )
+                }
             }
         }
     }

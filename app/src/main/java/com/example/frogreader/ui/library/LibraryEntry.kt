@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.library
 
+import com.example.frogreader.data.LibrarySortMode
 import com.example.frogreader.data.model.Book
 import com.example.frogreader.data.model.Shelf
 import com.example.frogreader.data.model.ShelfSortMode
@@ -33,17 +34,22 @@ sealed interface LibraryEntry {
     }
 }
 
-/**
- * The shelf's books in the order its own menu asks for.
- *
- * [ShelfSortMode.RECENT] keeps the stored order untouched: that list is not
- * insertion order but a working order — the member last opened sits first, and
- * the repository rotates it on every open. Sorting it by name would throw that
- * away, which is why the menu offers the choice instead of deciding for it.
- */
-internal fun List<Book>.inShelfOrder(mode: ShelfSortMode): List<Book> = when (mode) {
-    ShelfSortMode.RECENT -> this
-    ShelfSortMode.FILENAME -> sortedWith(ShelfFileNameOrder)
+internal val Shelf.sortPreference: ShelfSortMode
+    get() = if (sortMode == ShelfSortMode.RECENT && !sortModeExplicit) ShelfSortMode.FOLLOW_LIBRARY else sortMode
+
+/** Recency preserves the repository's order of shelf members. */
+private fun List<Book>.inShelfOrder(mode: ShelfSortMode, librarySortMode: LibrarySortMode): List<Book> {
+    val effectiveMode = when (mode) {
+        ShelfSortMode.FOLLOW_LIBRARY -> librarySortMode
+        ShelfSortMode.RECENT -> LibrarySortMode.RECENT
+        ShelfSortMode.FILENAME -> LibrarySortMode.FILENAME
+        ShelfSortMode.FOLDER -> LibrarySortMode.FOLDER
+    }
+    return when (effectiveMode) {
+        LibrarySortMode.RECENT -> this
+        LibrarySortMode.FILENAME -> sortedWith(ShelfFileNameOrder)
+        LibrarySortMode.FOLDER -> sortedWith(ByFolder)
+    }
 }
 
 /** Natural order over the name in the user's folder, then id for stability. */
@@ -60,7 +66,11 @@ private val ShelfFileNameOrder = Comparator<Book> { a, b ->
  * A shelf with one book, or none, is still a shelf — the user can make an empty
  * one and fill it later — so nothing here dissolves a shelf for being small.
  */
-internal fun buildEntries(books: List<Book>, shelves: List<Shelf>): List<LibraryEntry> {
+internal fun buildEntries(
+    books: List<Book>,
+    shelves: List<Shelf>,
+    librarySortMode: LibrarySortMode = LibrarySortMode.RECENT,
+): List<LibraryEntry> {
     if (shelves.isEmpty()) {
         // `books` already arrives sorted from the repository.
         return books.map { LibraryEntry.BookEntry(it) }
@@ -73,7 +83,7 @@ internal fun buildEntries(books: List<Book>, shelves: List<Shelf>): List<Library
     for (shelf in shelves) {
         val members = shelf.bookIds.mapNotNull { byId[it] }
             .filter { it.id !in shelved }
-            .inShelfOrder(shelf.sortMode)
+            .inShelfOrder(shelf.sortPreference, librarySortMode)
         members.forEach { shelved += it.id }
         shelfEntries += LibraryEntry.ShelfEntry(shelf, members)
     }

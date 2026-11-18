@@ -1,6 +1,7 @@
 package com.example.frogreader.ui.settings
 
-import com.example.frogreader.ui.components.FrogSnackbarHost
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedContentTransitionScope
@@ -11,6 +12,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,7 +23,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
@@ -29,20 +30,16 @@ import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -53,6 +50,10 @@ import com.example.frogreader.data.AppLockDelay
 import com.example.frogreader.data.AppSettings
 import com.example.frogreader.data.BackupFrequency
 import com.example.frogreader.data.effectiveTheme
+import com.example.frogreader.ui.components.ConnectedCardGap
+import com.example.frogreader.ui.components.FrogSnackbarHost
+import com.example.frogreader.ui.components.connectedCard
+import com.example.frogreader.ui.components.connectedCardShape
 import com.example.frogreader.ui.theme.displayNameRes
 import kotlinx.coroutines.launch
 import java.text.DateFormat
@@ -180,14 +181,16 @@ internal fun SettingsEntryPage(
 ) {
     val systemDark = isSystemInDarkTheme()
     val effectiveTheme = settings.effectiveTheme(systemDark)
+    val scheme = MaterialTheme.colorScheme
     val versionName = installedVersionName()
 
     SettingsPageScaffold(
         title = stringResource(R.string.settings_title),
         onBack = onBack,
     ) {
-        SettingsCard {
+        Column(verticalArrangement = Arrangement.spacedBy(ConnectedCardGap)) {
             SettingsNavigationRow(
+                modifier = Modifier.connectedCard(scheme, connectedCardShape(last = false)),
                 icon = Icons.Rounded.Palette,
                 title = stringResource(R.string.settings_theme_title),
                 subtitle = if (settings.followSystemTheme) {
@@ -204,8 +207,8 @@ internal fun SettingsEntryPage(
                 onClick = onOpenTheme,
                 trailing = { ThemeSwatch() },
             )
-            SettingsDivider()
             SettingsNavigationRow(
+                modifier = Modifier.connectedCard(scheme, connectedCardShape(first = false)),
                 icon = Icons.AutoMirrored.Rounded.MenuBook,
                 title = stringResource(R.string.settings_reading_title),
                 subtitle = readingSummary(settings),
@@ -215,15 +218,16 @@ internal fun SettingsEntryPage(
 
         Spacer(Modifier.height(24.dp))
 
-        SettingsCard {
+        Column(verticalArrangement = Arrangement.spacedBy(ConnectedCardGap)) {
             SettingsNavigationRow(
+                modifier = Modifier.connectedCard(scheme, connectedCardShape(last = false)),
                 icon = Icons.Rounded.Fingerprint,
                 title = stringResource(R.string.settings_app_lock_title),
                 subtitle = lockSummary(settings),
                 onClick = onOpenPrivacy,
             )
-            SettingsDivider()
             SettingsNavigationRow(
+                modifier = Modifier.connectedCard(scheme, connectedCardShape(first = false)),
                 icon = Icons.Rounded.CloudUpload,
                 title = stringResource(R.string.settings_backup_title),
                 subtitle = backupSummary(lastBackupAt, backupFrequency),
@@ -233,14 +237,13 @@ internal fun SettingsEntryPage(
 
         Spacer(Modifier.height(24.dp))
 
-        SettingsCard {
-            SettingsNavigationRow(
-                icon = Icons.Rounded.Info,
-                title = stringResource(R.string.app_name),
-                subtitle = stringResource(R.string.settings_about_summary, versionName),
-                onClick = onOpenAbout,
-            )
-        }
+        SettingsNavigationRow(
+            modifier = Modifier.connectedCard(scheme, connectedCardShape()),
+            icon = Icons.Rounded.Info,
+            title = stringResource(R.string.app_name),
+            subtitle = stringResource(R.string.settings_about_summary, versionName),
+            onClick = onOpenAbout,
+        )
     }
 }
 

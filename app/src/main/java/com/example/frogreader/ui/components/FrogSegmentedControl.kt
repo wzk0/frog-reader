@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.components
 
+import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.VectorConverter
 import androidx.compose.animation.core.spring
@@ -74,6 +75,7 @@ internal fun FrogSegmentedControl(
     indicatorRadius: Dp = 20.dp,
     indicatorBorder: Color = Color.Transparent,
     minItemHeight: Dp = 40.dp,
+    indicatorAnimationSpec: AnimationSpec<Rect> = spring(dampingRatio = 0.86f, stiffness = 550f),
     content: @Composable (index: Int, selected: Boolean, color: Color) -> Unit,
 ) {
     if (count == 0) return
@@ -101,7 +103,7 @@ internal fun FrogSegmentedControl(
             motion.snapTo(target)
             initialized = true
         } else {
-            motion.animateTo(target, spring(dampingRatio = 0.86f, stiffness = 550f))
+            motion.animateTo(target, indicatorAnimationSpec)
         }
     }
     // External changes, rotation and disabling a control cancel an in-flight grab.

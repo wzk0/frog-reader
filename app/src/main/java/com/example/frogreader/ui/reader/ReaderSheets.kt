@@ -1,9 +1,14 @@
 package com.example.frogreader.ui.reader
 
+import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.connectedCard
+import com.example.frogreader.ui.components.ConnectedCardGap
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,11 +20,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -33,15 +36,12 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.BrightnessAuto
-import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Delete
@@ -49,7 +49,6 @@ import androidx.compose.material.icons.rounded.DensityLarge
 import androidx.compose.material.icons.rounded.DensitySmall
 import androidx.compose.material.icons.rounded.FormatAlignJustify
 import androidx.compose.material.icons.rounded.Lightbulb
-import androidx.compose.material.icons.rounded.HistoryEdu
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.FormatSize
 import androidx.compose.material.icons.rounded.InvertColors
@@ -65,7 +64,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LoadingIndicator
 import androidx.compose.material3.ColorScheme
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -76,11 +74,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -90,7 +86,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -110,7 +105,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
@@ -339,18 +333,18 @@ private fun ContentsTab(
                     animationSpec = readerChapterSwitchSpec(),
                     label = "contentsCurrentRow",
                 )
-                // Spacing expresses hierarchy. A single rounded fill marks the
-                // current location; no duplicate stripe, check badge or row grid.
+                val next = visibleIndices.getOrNull(visibleIndex + 1)
+                val endsSection = group || next == null || tree.isGroup[next] || tree.parent[next] != tree.parent[index]
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(
                             start = 14.dp * tree.depth[index].coerceAtMost(4),
-                            top = if (startsSection && visibleIndex > 0) 10.dp else 2.dp,
-                            bottom = 2.dp,
+                            top = if (startsSection && visibleIndex > 0) 10.dp else ConnectedCardGap,
                         )
-                        .clip(RoundedCornerShape(12.dp))
+                        .animateItem()
+                        .connectedCard(scheme, connectedCardShape(first = visibleIndex == 0 || startsSection, last = endsSection))
                         .background(rowBackground)
                         .semantics { selected = isCurrent }
                         .clickable { onChapterClick(entry.target) }
@@ -471,12 +465,17 @@ private fun BookmarkList(
     onBookmarkClick: (Int) -> Unit,
     onRemoveBookmark: (String) -> Unit,
 ) {
-    LazyColumn(contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp)) {
-        items(bookmarks, key = { it.id }) { bookmark ->
+    LazyColumn(
+        contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(ConnectedCardGap),
+    ) {
+        itemsIndexed(bookmarks, key = { _, item -> item.id }) { index, bookmark ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .animateItem()
+                    .connectedCard(MaterialTheme.colorScheme, connectedCardShape(index, bookmarks.size))
                     // A bookmark whose passage is not in this file cannot be
                     // jumped to. Better to say so than to seek to whatever
                     // happens to sit at the old index now.
@@ -538,8 +537,11 @@ private fun QuotesTab(
         EmptyTabHint(stringResource(R.string.reader_quotes_empty))
         return
     }
-    LazyColumn(contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp)) {
-        items(quotes, key = { it.id }) { quote ->
+    LazyColumn(
+        contentPadding = PaddingValues(top = 4.dp, bottom = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(ConnectedCardGap),
+    ) {
+        itemsIndexed(quotes, key = { _, item -> item.id }) { index, quote ->
             // A quote saved before anchors existed, or one whose book file was
             // replaced under it, has nowhere to jump to — it still copies.
             val anchored = quote.startItem >= 0
@@ -547,6 +549,8 @@ private fun QuotesTab(
                 verticalAlignment = Alignment.Top,
                 modifier = Modifier
                     .fillMaxWidth()
+                    .animateItem()
+                    .connectedCard(MaterialTheme.colorScheme, connectedCardShape(index, quotes.size))
                     .then(
                         if (anchored) {
                             Modifier.clickable { onQuoteClick(quote) }
@@ -637,6 +641,8 @@ fun ReaderSettingsControls(
     /** Live book page numbers for page counter preview cards. */
     pageCounterInfo: PageCounterInfo? = null,
 ) {
+    val scheme = MaterialTheme.colorScheme
+    val panelColors = remember(colors, scheme) { colors.forSettings(scheme) }
     val haptics = LocalHapticFeedback.current
     val context = LocalContext.current
 
@@ -730,20 +736,20 @@ fun ReaderSettingsControls(
                     .size(18.dp)
                     .clip(CircleShape)
                     .background(readerColors(themes[index]).background)
-                    .border(1.dp, colors.onChrome.copy(alpha = 0.25f), CircleShape),
+                    .border(1.dp, panelColors.onChrome.copy(alpha = 0.25f), CircleShape),
             )
         }
         val fontScale = LocalDensity.current.fontScale
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             if (maxWidth < 280.dp || fontScale > 1.25f) {
                 Column(
-                    Modifier.clip(RoundedCornerShape(26.dp)).background(colors.control),
+                    Modifier.clip(RoundedCornerShape(26.dp)).background(panelColors.control),
                 ) {
                     themes.forEachIndexed { index, theme ->
                         ChipRow(
                             options = listOf(themeLabels[index]),
                             selectedIndex = if (theme == appSettings.theme) 0 else -1,
-                            colors = colors,
+                            colors = panelColors,
                             onSelect = {
                                 onUpdateApp { it.copy(theme = theme, followSystemTheme = false) }
                             },
@@ -755,7 +761,7 @@ fun ReaderSettingsControls(
                 ChipRow(
                     options = themeLabels,
                     selectedIndex = themes.indexOf(appSettings.theme),
-                    colors = colors,
+                    colors = panelColors,
                     onSelect = { index ->
                         onUpdateApp { it.copy(theme = themes[index], followSystemTheme = false) }
                     },
@@ -794,18 +800,18 @@ fun ReaderSettingsControls(
             )
             onDispose { context.contentResolver.unregisterContentObserver(observer) }
         }
-        PanelSectionLabel(stringResource(R.string.reader_brightness), colors)
+        PanelSectionLabel(stringResource(R.string.reader_brightness), panelColors)
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 Icons.Rounded.WbSunny,
                 contentDescription = null,
-                tint = colors.onChromeVariant,
+                tint = panelColors.onChromeVariant,
                 modifier = Modifier.size(16.dp),
             )
             SettingSlider(
                 value = brightnessPosition(brightness ?: systemBrightness),
                 onChange = { position -> onBrightnessChange(brightnessFromPosition(position)) },
-                colors = colors,
+                colors = panelColors,
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 12.dp),
@@ -813,7 +819,7 @@ fun ReaderSettingsControls(
             Icon(
                 Icons.Rounded.WbSunny,
                 contentDescription = null,
-                tint = colors.onChrome,
+                tint = panelColors.onChrome,
                 modifier = Modifier.size(22.dp),
             )
             Spacer(Modifier.width(10.dp))
@@ -823,14 +829,14 @@ fun ReaderSettingsControls(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
                     .background(
-                        if (autoBrightness) colors.selectedControl else Color.Transparent,
+                        if (autoBrightness) panelColors.selectedControl else Color.Transparent,
                     )
                     .border(
                         width = 1.dp,
                         color = if (autoBrightness) {
-                            colors.selectedControlBorder
+                            panelColors.selectedControlBorder
                         } else {
-                            colors.onChrome.copy(alpha = 0.3f)
+                            panelColors.onChrome.copy(alpha = 0.3f)
                         },
                         shape = RoundedCornerShape(20.dp),
                     )
@@ -843,7 +849,7 @@ fun ReaderSettingsControls(
                 Icon(
                     Icons.Rounded.BrightnessAuto,
                     contentDescription = null,
-                    tint = if (autoBrightness) colors.onSelectedControl else colors.onChromeVariant,
+                    tint = if (autoBrightness) panelColors.onSelectedControl else panelColors.onChromeVariant,
                     modifier = Modifier.size(16.dp),
                 )
                 Spacer(Modifier.width(4.dp))
@@ -851,7 +857,7 @@ fun ReaderSettingsControls(
                     stringResource(R.string.reader_brightness_auto),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = if (autoBrightness) FontWeight.Bold else FontWeight.Medium,
-                    color = if (autoBrightness) colors.onSelectedControl else colors.onChromeVariant,
+                    color = if (autoBrightness) panelColors.onSelectedControl else panelColors.onChromeVariant,
                 )
             }
         }
@@ -860,10 +866,10 @@ fun ReaderSettingsControls(
         // Line spacing and font size: compact steppers, side by side.
         ReaderControlPair(
             first = {
-                PanelSectionLabel(stringResource(R.string.reader_line_height), colors)
+                PanelSectionLabel(stringResource(R.string.reader_line_height), panelColors)
                 StepperGroup(
                     value = "×%.1f".format(shownLineHeight),
-                    colors = colors,
+                    colors = panelColors,
                     decreaseEnabled = shownLineHeight > 1.2f,
                     increaseEnabled = shownLineHeight < 2.0f,
                     decreaseDescription = stringResource(R.string.reader_decrease_line_spacing),
@@ -892,7 +898,7 @@ fun ReaderSettingsControls(
                         Icon(
                             Icons.Rounded.DensitySmall,
                             contentDescription = null,
-                            tint = colors.onChrome,
+                            tint = panelColors.onChrome,
                             modifier = Modifier.size(20.dp),
                         )
                     },
@@ -900,20 +906,20 @@ fun ReaderSettingsControls(
                         Icon(
                             Icons.Rounded.DensityLarge,
                             contentDescription = null,
-                            tint = colors.onChrome,
+                            tint = panelColors.onChrome,
                             modifier = Modifier.size(20.dp),
                         )
                     },
                 )
             },
             second = {
-                PanelSectionLabel(stringResource(R.string.reader_font_size), colors)
+                PanelSectionLabel(stringResource(R.string.reader_font_size), panelColors)
                 StepperGroup(
                     value = stringResource(
                         R.string.reader_font_size_pt,
                         settings.fontSizeSp.roundToInt(),
                     ),
-                    colors = colors,
+                    colors = panelColors,
                     decreaseEnabled = settings.fontSizeSp > 12f,
                     increaseEnabled = settings.fontSizeSp < 32f,
                     decreaseDescription = stringResource(R.string.reader_decrease_font_size),
@@ -929,7 +935,7 @@ fun ReaderSettingsControls(
                             "A−",
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
-                            color = colors.accent,
+                            color = panelColors.accent,
                         )
                     },
                     increase = {
@@ -937,7 +943,7 @@ fun ReaderSettingsControls(
                             "A+",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = colors.accent,
+                            color = panelColors.accent,
                         )
                     },
                 )
@@ -955,10 +961,10 @@ fun ReaderSettingsControls(
                 )
             },
             first = {
-                PanelSectionLabel(stringResource(R.string.reader_section_margins), colors)
+                PanelSectionLabel(stringResource(R.string.reader_section_margins), panelColors)
                 StepperGroup(
                     value = stringResource(R.string.reader_margins_dp, settings.sideMarginDp),
-                    colors = colors,
+                    colors = panelColors,
                     repeatOnHold = true,
                     decreaseEnabled = settings.sideMarginDp > ReaderSettings.MIN_SIDE_MARGIN_DP,
                     increaseEnabled = settings.sideMarginDp < ReaderSettings.MAX_SIDE_MARGIN_DP,
@@ -984,7 +990,7 @@ fun ReaderSettingsControls(
                         Icon(
                             Icons.Rounded.UnfoldMore,
                             contentDescription = null,
-                            tint = colors.onChrome,
+                            tint = panelColors.onChrome,
                             modifier = Modifier.size(20.dp).rotate(90f),
                         )
                     },
@@ -992,14 +998,14 @@ fun ReaderSettingsControls(
                         Icon(
                             Icons.Rounded.UnfoldLess,
                             contentDescription = null,
-                            tint = colors.onChrome,
+                            tint = panelColors.onChrome,
                             modifier = Modifier.size(20.dp).rotate(90f),
                         )
                     },
                 )
             },
             second = {
-                PanelSectionLabel(stringResource(R.string.reader_mode), colors)
+                PanelSectionLabel(stringResource(R.string.reader_mode), panelColors)
                 val modes = ReadingMode.entries
                 ChipRow(
                     options = listOf(
@@ -1007,7 +1013,7 @@ fun ReaderSettingsControls(
                         stringResource(R.string.reader_mode_pages),
                     ),
                     selectedIndex = modes.indexOf(settings.readingMode),
-                    colors = colors,
+                    colors = panelColors,
                     onSelect = { index -> onUpdate { it.copy(readingMode = modes[index]) } },
                 )
             },
@@ -1017,10 +1023,10 @@ fun ReaderSettingsControls(
         if (settings.readingMode == ReadingMode.PAGES) {
             Column {
                 Spacer(Modifier.height(18.dp))
-                PanelSectionLabel(stringResource(R.string.reader_section_page_anim), colors)
+                PanelSectionLabel(stringResource(R.string.reader_section_page_anim), panelColors)
                 ReaderPageTurnPicker(
                     selected = settings.pageTurnAnimation,
-                    colors = colors,
+                    colors = panelColors,
                     onSelected = { animation -> onUpdate { it.copy(pageTurnAnimation = animation) } },
                 )
             }
@@ -1030,7 +1036,7 @@ fun ReaderSettingsControls(
 
         // Font family: bundled faces rendered in themselves, plus the
         // user's own font library behind the Custom chip.
-        PanelSectionLabel(stringResource(R.string.reader_font), colors)
+        PanelSectionLabel(stringResource(R.string.reader_font), panelColors)
         var showFontDialog by remember { mutableStateOf(false) }
         var fontsVersion by remember { mutableIntStateOf(0) }
         val fontScope = rememberCoroutineScope()
@@ -1075,7 +1081,7 @@ fun ReaderSettingsControls(
         val bookFontName = book?.fontName
         ReaderFontPicker(
             settings = settings,
-            colors = colors,
+            colors = panelColors,
             bookFontName = bookFontName,
             bookFontPath = book?.fontPath,
             bookFontFamily = bookFontFamily,
@@ -1093,13 +1099,13 @@ fun ReaderSettingsControls(
             Text(
                 text = stringResource(R.string.reader_font_from_book),
                 style = MaterialTheme.typography.bodySmall,
-                color = colors.accent,
+                color = panelColors.accent,
                 modifier = Modifier.padding(start = 4.dp),
             )
         }
         if (showFontDialog) {
             CustomFontsDialog(
-                colors = colors,
+                colors = panelColors,
                 bookFonts = publisherStyle?.embeddedFonts.orEmpty(),
                 bodyFontPath = book?.fontPath,
                 bodyFontAuto = book?.fontPath != null,
@@ -1260,15 +1266,15 @@ fun ReaderSettingsControls(
         // The book's own design — one switch that moves the controls below.
         PanelSectionLabel(
             stringResource(R.string.reader_section_book_design),
-            colors,
+            panelColors,
             icon = Icons.Rounded.AutoFixHigh,
         )
-        SettingsGroup(colors) {
+        SettingsGroup {
             SettingToggleRow(
                 icon = Icons.Rounded.AutoFixHigh,
                 title = stringResource(R.string.reader_book_styles),
                 subtitle = stringResource(R.string.reader_book_styles_subtitle),
-                colors = colors,
+                colors = panelColors,
                 checked = settings.bookStyles,
                 onCheckedChange = { onUpdate { s -> s.copy(bookStyles = it) } },
             )
@@ -1279,14 +1285,15 @@ fun ReaderSettingsControls(
         // Text & layout
         PanelSectionLabel(
             stringResource(R.string.reader_section_text_layout),
-            colors,
+            panelColors,
             icon = Icons.Rounded.TextFields,
         )
-        SettingsGroup(colors) {
+        SettingsGroup {
             SettingToggleRow(
+                shape = connectedCardShape(0, 4),
                 icon = Icons.Rounded.FormatAlignJustify,
                 title = stringResource(R.string.reader_justify),
-                colors = colors,
+                colors = panelColors,
                 checked = shownJustify,
                 fromBook = book?.justify != null,
                 onCheckedChange = { value ->
@@ -1294,11 +1301,11 @@ fun ReaderSettingsControls(
                     onUpdate { s -> bake(s).copy(justify = value) }
                 },
             )
-            PanelDivider(colors)
             SettingToggleRow(
+                shape = connectedCardShape(1, 4),
                 icon = Icons.Rounded.Remove,
                 title = stringResource(R.string.reader_hyphenation),
-                colors = colors,
+                colors = panelColors,
                 checked = shownHyphenation,
                 fromBook = book?.hyphenation != null,
                 onCheckedChange = { value ->
@@ -1306,12 +1313,12 @@ fun ReaderSettingsControls(
                     onUpdate { s -> bake(s).copy(hyphenation = value) }
                 },
             )
-            PanelDivider(colors)
             SettingToggleRow(
+                shape = connectedCardShape(2, 4),
                 icon = Icons.Rounded.FormatSize,
                 title = stringResource(R.string.reader_drop_caps),
                 subtitle = stringResource(R.string.reader_drop_caps_subtitle),
-                colors = colors,
+                colors = panelColors,
                 checked = shownDropCaps,
                 fromBook = book?.dropCaps == true,
                 onCheckedChange = { value ->
@@ -1319,12 +1326,12 @@ fun ReaderSettingsControls(
                     onUpdate { s -> bake(s).copy(dropCaps = value) }
                 },
             )
-            PanelDivider(colors)
             SettingToggleRow(
+                shape = connectedCardShape(3, 4),
                 icon = Icons.Rounded.InvertColors,
                 title = stringResource(R.string.reader_invert_images),
                 subtitle = stringResource(R.string.reader_invert_images_subtitle),
-                colors = colors,
+                colors = panelColors,
                 checked = appSettings.autoInvertImages,
                 onCheckedChange = { value ->
                     onUpdateApp { s -> s.copy(autoInvertImages = value) }
@@ -1338,61 +1345,63 @@ fun ReaderSettingsControls(
         val isPagedMode = settings.readingMode == ReadingMode.PAGES
         PanelSectionLabel(
             stringResource(R.string.reader_section_pages_nav),
-            colors,
+            panelColors,
             icon = Icons.AutoMirrored.Rounded.MenuBook,
         )
-        SettingsGroup(colors) {
+        SettingsGroup {
             SettingToggleRow(
+                shape = connectedCardShape(0, 2),
                 icon = Icons.AutoMirrored.Rounded.MenuBook,
                 title = stringResource(R.string.reader_chapter_new_page),
-                colors = colors,
+                colors = panelColors,
                 checked = settings.startChaptersOnNewPage,
                 enabled = isPagedMode,
                 onCheckedChange = { onUpdate { s -> s.copy(startChaptersOnNewPage = it) } },
             )
-            PanelDivider(colors)
             SettingToggleRow(
+                shape = connectedCardShape(1, 2),
                 icon = Icons.Rounded.Superscript,
                 title = stringResource(R.string.reader_hide_footnotes),
                 subtitle = stringResource(R.string.reader_hide_footnotes_subtitle),
-                colors = colors,
+                colors = panelColors,
                 checked = settings.hideFootnotes,
                 onCheckedChange = { onUpdate { s -> s.copy(hideFootnotes = it) } },
             )
         }
 
         Spacer(Modifier.height(12.dp))
-        ReaderPageCounterSettings(settings, colors, pageCounterInfo, onUpdate)
+        ReaderPageCounterSettings(settings, panelColors, pageCounterInfo, onUpdate)
 
         Spacer(Modifier.height(20.dp))
 
         // Device
         PanelSectionLabel(
             stringResource(R.string.reader_section_device),
-            colors,
+            panelColors,
             icon = Icons.Rounded.Smartphone,
         )
-        SettingsGroup(colors) {
+        SettingsGroup {
             SettingToggleRow(
+                shape = connectedCardShape(0, 3),
                 icon = Icons.Rounded.Lightbulb,
                 title = stringResource(R.string.settings_keep_screen_on),
-                colors = colors,
+                colors = panelColors,
                 checked = appSettings.keepScreenOn,
                 onCheckedChange = { onUpdateApp { s -> s.copy(keepScreenOn = it) } },
             )
-            PanelDivider(colors)
             SettingToggleRow(
+                shape = connectedCardShape(1, 3),
                 icon = Icons.Rounded.Vibration,
                 title = stringResource(R.string.reader_haptics),
-                colors = colors,
+                colors = panelColors,
                 checked = appSettings.haptics,
                 onCheckedChange = { onUpdateApp { s -> s.copy(haptics = it) } },
             )
-            PanelDivider(colors)
             SettingToggleRow(
+                shape = connectedCardShape(2, 3),
                 icon = Icons.AutoMirrored.Rounded.VolumeUp,
                 title = stringResource(R.string.reader_volume_keys),
-                colors = colors,
+                colors = panelColors,
                 checked = appSettings.volumeKeyPaging,
                 onCheckedChange = { onUpdateApp { s -> s.copy(volumeKeyPaging = it) } },
             )
@@ -1400,14 +1409,14 @@ fun ReaderSettingsControls(
 
         Spacer(Modifier.height(20.dp))
 
-        PanelSectionLabel(stringResource(R.string.settings_reader_chrome_title), colors)
+        PanelSectionLabel(stringResource(R.string.settings_reader_chrome_title), panelColors)
         ChipRow(
             options = listOf(
                 stringResource(R.string.reader_chrome_floating),
                 stringResource(R.string.reader_chrome_classic),
             ),
             selectedIndex = ReaderChromeStyle.entries.indexOf(appSettings.readerChromeStyle),
-            colors = colors,
+            colors = panelColors,
             onSelect = { index ->
                 onUpdateApp { it.copy(readerChromeStyle = ReaderChromeStyle.entries[index]) }
             },
@@ -1704,23 +1713,10 @@ private fun PanelSectionLabel(
 }
 
 @Composable
-private fun SettingsGroup(colors: ReaderColors, content: @Composable () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(colors.control),
-    ) {
+private fun SettingsGroup(content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(ConnectedCardGap)) {
         content()
     }
-}
-
-@Composable
-private fun PanelDivider(colors: ReaderColors) {
-    HorizontalDivider(
-        color = colors.controlStrong,
-        modifier = Modifier.padding(start = 54.dp),
-    )
 }
 
 @Composable
@@ -1732,6 +1728,7 @@ private fun SettingToggleRow(
     onCheckedChange: (Boolean) -> Unit,
     subtitle: String? = null,
     enabled: Boolean = true,
+    shape: RoundedCornerShape = connectedCardShape(),
     /**
      * The book decides this one (publisher's formatting): the switch animates
      * to the book's answer and says so. It stays fully usable — changing it
@@ -1741,10 +1738,17 @@ private fun SettingToggleRow(
 ) {
     val haptics = LocalHapticFeedback.current
     val lockedNote = stringResource(R.string.reader_set_by_book)
+    val toggle: (Boolean) -> Unit = { value ->
+        haptics.performHapticFeedback(if (value) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff)
+        onCheckedChange(value)
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
+            .clip(shape)
+            .background(colors.control)
+            .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = toggle)
             .graphicsLayer { alpha = if (enabled) 1f else 0.5f }
             .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
@@ -1784,12 +1788,7 @@ private fun SettingToggleRow(
                 disabledUncheckedTrackColor = colors.control,
                 disabledUncheckedBorderColor = colors.onChromeVariant.copy(alpha = 0.3f),
             ),
-            onCheckedChange = { value ->
-                haptics.performHapticFeedback(
-                    if (value) HapticFeedbackType.ToggleOn else HapticFeedbackType.ToggleOff,
-                )
-                onCheckedChange(value)
-            },
+            onCheckedChange = null,
         )
     }
 }

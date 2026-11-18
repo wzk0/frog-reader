@@ -1,12 +1,11 @@
 package com.example.frogreader.ui.library
 
+import com.example.frogreader.ui.components.cardSurface
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import com.example.frogreader.ui.components.FrogSnackbarHost
 import com.example.frogreader.ui.theme.floatingSurface
-import android.net.Uri
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -37,7 +36,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,30 +55,25 @@ import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.ViewAgenda
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DropdownMenu
+import com.example.frogreader.ui.components.FlatDropdownMenu as DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
@@ -88,12 +82,10 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.lerp
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
@@ -115,9 +107,11 @@ import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.ui.util.lerp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import coil3.compose.AsyncImage
 import com.example.frogreader.R
 import com.example.frogreader.ui.components.FrogSegmentedControl
+import com.example.frogreader.ui.components.ConnectedCardGap
+import com.example.frogreader.ui.components.connectedCard
+import com.example.frogreader.ui.components.connectedCardShape
 import com.example.frogreader.data.LibraryViewMode
 import com.example.frogreader.data.LibrarySortMode
 import com.example.frogreader.data.model.Book
@@ -149,7 +143,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 
 // Numbers below come straight from the 412x916dp design mock, 1:1.
 private val GridGap = 14.dp
-private val ListGap = 8.dp
+private val GridRowGap = 8.dp
 private val SidePadding = 20.dp
 private val BottomInset = 20.dp
 
@@ -176,9 +170,8 @@ private class ShelfPopState {
 private const val ShelfPopFrom = 0.62f
 
 /** Material fade-through, applied to the entries when the view mode changes. */
-private const val ModeSwapOutMillis = 90
-private const val ModeSwapInMillis = 210
-private const val ModeSwapScale = 0.92f
+private const val ModeSwapOutMillis = 75
+private const val ModeSwapInMillis = 150
 
 private val IdleArrivalState: State<Float> = mutableStateOf(1f)
 
@@ -507,6 +500,8 @@ fun LibraryScreen(
             }
             swapSettling = true
             renderMode = viewMode
+            // Commit the new grid layout before starting the reveal clock.
+            if (swap.value < 1f) withFrameNanos { }
         }
         // Never skip this tail, even when the modes already match. Toggling
         // back mid-fade cancels and restarts this effect with viewMode already
@@ -522,17 +517,32 @@ fun LibraryScreen(
     // item: the lambda below runs during measurement, on every item.
     val bookType = remember(renderMode) { "${renderMode.name}:book" }
     val shelfType = remember(renderMode) { "${renderMode.name}:shelf" }
-    val folderType = remember(renderMode) { "${renderMode.name}:folder" }
 
-    val swapProgress = swap.asState()
-    // Hoisted so the lambda instance is stable, and read only from inside
-    // graphicsLayer: the fade runs in the draw phase and recomposes nothing.
-    val modeFade = remember(swapProgress) {
-        Modifier.graphicsLayer {
-            val progress = swapProgress.value
-            alpha = progress
-            scaleX = lerp(ModeSwapScale, 1f, progress)
-            scaleY = scaleX
+    val librarySurface = MaterialTheme.colorScheme.surface
+    // Fade the content with one draw pass. Per-item alpha creates a separate
+    // offscreen buffer for each cover, while the controls need no fade at all.
+    val modeFade = remember(gridState, swap, librarySurface) {
+        Modifier.drawWithContent {
+            drawContent()
+            val opacity = 1f - swap.value
+            if (opacity > 0f) {
+                val layout = gridState.layoutInfo
+                var start = 0f
+                for (item in layout.visibleItemsInfo) {
+                    if (item.key == "library_header" || item.key == "library_section") {
+                        val bottom = item.offset.y + item.size.height - layout.viewportStartOffset
+                        start = maxOf(start, bottom.toFloat())
+                    }
+                }
+                if (start < size.height) {
+                    drawRect(
+                        color = librarySurface,
+                        alpha = opacity,
+                        topLeft = Offset(0f, start),
+                        size = Size(size.width, size.height - start),
+                    )
+                }
+            }
         }
     }
 
@@ -588,7 +598,7 @@ fun LibraryScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.surface)
+                .background(librarySurface)
                 .onGloballyPositioned { tileBounds.rootOrigin = it.positionInRoot() },
         ) {
             LazyVerticalGrid(
@@ -600,14 +610,13 @@ fun LibraryScreen(
                 // column count keeps every entry at span 1 in both modes, which
                 // is what lets the keys below stay stable.
                 columns = GridCells.Fixed(if (renderMode == LibraryViewMode.GRID) 3 else 1),
-                modifier = Modifier.fillMaxSize().nestedScroll(dockScrollConnection),
+                modifier = Modifier.fillMaxSize().nestedScroll(dockScrollConnection).then(modeFade),
                 contentPadding = PaddingValues(
                     start = SidePadding,
                     end = SidePadding,
                     bottom = BottomInset + contentPadding.calculateBottomPadding(),
                 ),
                 horizontalArrangement = Arrangement.spacedBy(GridGap),
-                verticalArrangement = Arrangement.spacedBy(ListGap),
             ) {
                 item(span = { GridItemSpan(maxLineSpan) }, key = "library_header") {
                     LibraryHeader(
@@ -625,7 +634,7 @@ fun LibraryScreen(
                             heroBook?.let { pendingRemoval = PendingRemoval(listOf(it.id)) }
                         },
                         // The header is full-bleed; undo the grid's side padding.
-                        modifier = Modifier.bleedHorizontally(SidePadding),
+                        modifier = Modifier.padding(bottom = GridRowGap).bleedHorizontally(SidePadding),
                     )
                 }
 
@@ -657,7 +666,7 @@ fun LibraryScreen(
                             selection = selection.takeIf { it.scope == SelectionScope.Grid },
                             onSelectAll = { selection.selectAll(visibleEntries.map { it.id }) },
                             onClearSelection = { selection.clear() },
-                            modifier = Modifier.padding(top = 6.dp, bottom = 6.dp),
+                            modifier = Modifier.padding(top = 6.dp, bottom = 6.dp + GridRowGap),
                         )
                     }
                 }
@@ -671,32 +680,33 @@ fun LibraryScreen(
                         NoSearchResults(Modifier.padding(top = 48.dp))
                     }
                 } else {
-                    items(
+                    itemsIndexed(
                         items = slots,
                         // The slot id alone, so a mode swap KEEPS every item
                         // slot: the cover's image node survives, its remembers
                         // survive, and the grid keeps its scroll anchor. Safe
                         // because a slot's span never changes with the mode —
                         // only the column count does.
-                        key = { it.id },
+                        key = { _, slot -> slot.id },
                         // Only a folder heading spans the row. Books and
                         // shelves stay at one cell in both modes, so switching
                         // grid/list still keeps every key's span unchanged.
-                        span = { slot ->
+                        span = { _, slot ->
                             if (slot is LibrarySlot.Folder) {
                                 GridItemSpan(maxLineSpan)
                             } else {
                                 GridItemSpan(1)
                             }
                         },
-                        contentType = { slot ->
+                        contentType = { _, slot ->
                             when (slot) {
-                                is LibrarySlot.Folder -> folderType
+                                is LibrarySlot.Folder -> "folder"
                                 is LibrarySlot.Entry ->
                                     if (slot.entry is LibraryEntry.ShelfEntry) shelfType else bookType
                             }
                         },
-                    ) { slot ->
+                    ) { index, slot ->
+                        val rowGap = if (renderMode == LibraryViewMode.LIST) ConnectedCardGap else GridRowGap
                         if (slot is LibrarySlot.Folder) {
                             // Headings animate with their books: grouped mode
                             // is a reorder, not a new screen, and a heading
@@ -709,9 +719,9 @@ fun LibraryScreen(
                                     fadeInSpec = if (swapping) null else ItemFadeSpec,
                                     fadeOutSpec = if (swapping) null else ItemFadeSpec,
                                     placementSpec = if (swapping || !orderingSettled) null else ItemPlacementSpec,
-                                ),
+                                ).padding(bottom = rowGap),
                             )
-                            return@items
+                            return@itemsIndexed
                         }
 
                         val entry = (slot as LibrarySlot.Entry).entry
@@ -731,12 +741,13 @@ fun LibraryScreen(
                                 // cross-fade carries that motion instead.
                                 placementSpec = if (swapping || !orderingSettled) null else ItemPlacementSpec,
                             )
+                            .padding(bottom = rowGap)
                             .tileBounds(entry.id, tileBounds)
-                            // AFTER tileBounds, so its onGloballyPositioned sits
-                            // outside this layer: a rect measured through a scaled
-                            // layer is the wrong place to unfold a folder from.
-                            .then(modeFade)
 
+                        val rowShape = connectedCardShape(
+                            first = slots.getOrNull(index - 1) !is LibrarySlot.Entry,
+                            last = slots.getOrNull(index + 1) !is LibrarySlot.Entry,
+                        )
                         val ticked = gridSelecting && entry.id in selection
                         val click = { onEntryClick(entry) }
                         val longPress = { onEntryLongPress(entry) }
@@ -762,6 +773,7 @@ fun LibraryScreen(
                                     selected = ticked,
                                     onClick = click,
                                     onLongClick = longPress,
+                                    shape = rowShape,
                                     modifier = itemModifier,
                                 )
                             }
@@ -787,6 +799,7 @@ fun LibraryScreen(
                                     onClick = click,
                                     onLongClick = longPress,
                                     onAddBooks = { addBooksToShelf = entry.shelf.id },
+                                    shape = rowShape,
                                     modifier = itemModifier,
                                 )
                             }
@@ -900,10 +913,10 @@ fun LibraryScreen(
                     }
                     LibraryItemMenu(
                         target = target,
-                        shelfSortMode = menuShelf?.sortMode ?: ShelfSortMode.RECENT,
+                        shelfSortMode = menuShelf?.sortPreference ?: ShelfSortMode.FOLLOW_LIBRARY,
                         onShelfSort = { mode ->
                             menuShelf?.let { shelf ->
-                                if (shelf.sortMode != mode) {
+                                if (shelf.sortPreference != mode) {
                                     haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
                                     viewModel.setShelfSortMode(shelf.id, mode)
                                 }
@@ -997,7 +1010,6 @@ fun LibraryScreen(
                 addToShelfFor = null
             },
             onPick = { shelfId ->
-                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                 viewModel.addToShelf(shelfId, request.bookIds)
                 selection.clear()
                 addToShelfFor = null
@@ -1015,7 +1027,6 @@ fun LibraryScreen(
                 shelfToDelete = null
             },
             onDeleteBooks = {
-                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                 viewModel.deleteShelfWithBooks(shelfId)
                 if (openShelfId == shelfId) openShelfId = null
                 selection.clear()
@@ -1070,7 +1081,6 @@ fun LibraryScreen(
                 ?.let { stringResource(R.string.library_delete_message, it.title) }
                 ?: removal.describe(),
             onConfirm = {
-                haptics.performHapticFeedback(HapticFeedbackType.Confirm)
                 viewModel.deleteBooks(removal.bookIds)
                 removal.shelfIds.forEach { viewModel.deleteShelf(it) }
                 selection.clear()
@@ -1138,16 +1148,12 @@ private fun LibraryHeader(
     onHeroDelete: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val frog = LocalFrogColors.current
-
     FrogHeaderContent(
         query = query,
         onQueryChange = onQueryChange,
         searchHint = stringResource(R.string.library_search_hint),
         onOpenSettings = onOpenSettings,
-        modifier = modifier
-            .clip(RoundedCornerShape(bottomStart = 36.dp, bottomEnd = 36.dp))
-            .background(Brush.verticalGradient(listOf(frog.headerTop, frog.headerBottom))),
+        modifier = modifier.background(MaterialTheme.colorScheme.surface),
     ) {
         if (heroBook != null) {
             HeroCard(
@@ -1184,8 +1190,7 @@ private fun HeroCard(
 
     Surface(
         shape = RoundedCornerShape(FrogHeroCorner),
-        color = scheme.surfaceContainerLowest,
-        shadowElevation = 2.dp,
+        color = scheme.cardSurface,
         modifier = modifier.fillMaxWidth(),
     ) {
         Row(
@@ -1352,7 +1357,6 @@ private fun HeroCover(
                 scaleX = scale
                 scaleY = scale
                 rotationZ = rotation
-                shadowElevation = 8.dp.toPx()
                 shape = RoundedCornerShape(corner.dp)
                 clip = true
             }
@@ -1378,10 +1382,7 @@ private fun HeroMenu(
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(24.dp),
-        containerColor = MaterialTheme.colorScheme.floatingSurface,
         tonalElevation = 0.dp,
-        modifier = Modifier.width(204.dp),
     ) {
         if (canEdit) HeroMenuItem(
             icon = Icons.Rounded.Edit,
@@ -1396,11 +1397,6 @@ private fun HeroMenu(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             textColor = MaterialTheme.colorScheme.onSurface,
             onClick = onDetails,
-        )
-        HorizontalDivider(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-            thickness = 1.dp,
-            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
         )
         HeroMenuItem(
             icon = Icons.Rounded.Delete,
@@ -1518,7 +1514,8 @@ private fun SectionRow(
                     indicatorColor = scheme.surface,
                     contentColor = scheme.onSurfaceVariant,
                     selectedContentColor = scheme.primary,
-                    modifier = Modifier.width(68.dp),
+                    modifier = Modifier.width(68.dp).height(SectionRowHeight),
+                    indicatorAnimationSpec = tween(140),
                     gap = 2.dp,
                     padding = 3.dp,
                     containerRadius = 16.dp,
@@ -2036,6 +2033,7 @@ private fun BookListRow(
     selected: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    shape: RoundedCornerShape,
     modifier: Modifier = Modifier,
 ) {
     val arrival by rememberEntryArrival(book.id, pop)
@@ -2059,8 +2057,7 @@ private fun BookListRow(
                 }
             }
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(scheme.surfaceContainer)
+            .connectedCard(scheme, shape)
             .drawBehind {
                 if (fraction <= 0f) return@drawBehind
                 // Lazy list rows have no bounded height during measurement.
@@ -2084,7 +2081,7 @@ private fun BookListRow(
                     onLongClick = onLongClick,
                     onClick = onClick,
                 )
-            .selectionOverlay(selected, RoundedCornerShape(20.dp)),
+            .selectionOverlay(selected, shape),
     ) {
         Row(
             modifier = Modifier.padding(8.dp),
@@ -2145,9 +2142,9 @@ private fun ShelfListRow(
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     onAddBooks: () -> Unit,
+    shape: RoundedCornerShape,
     modifier: Modifier = Modifier,
 ) {
-    val frog = LocalFrogColors.current
     val scheme = MaterialTheme.colorScheme
     val arrival = rememberEntryArrival(entry.shelf.id, pop)
 
@@ -2165,8 +2162,7 @@ private fun ShelfListRow(
                     base
                 }
             }
-            .clip(RoundedCornerShape(20.dp))
-            .background(frog.folder)
+            .connectedCard(scheme, shape)
             // hapticFeedbackEnabled = false: the long-press haptic is fired once by
                 // onEntryLongPress, and combinedClickable fires its own — the two
                 // arrive as a double buzz.
@@ -2175,7 +2171,7 @@ private fun ShelfListRow(
                     onLongClick = onLongClick,
                     onClick = onClick,
                 )
-            .selectionOverlay(selected, RoundedCornerShape(20.dp))
+            .selectionOverlay(selected, shape)
             .padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 12.dp),
     ) {
         Row(
@@ -2196,7 +2192,7 @@ private fun ShelfListRow(
                 fontSize = 13.sp,
                 lineHeight = 16.sp,
                 fontWeight = FontWeight.Medium,
-                color = frog.ink,
+                color = scheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),

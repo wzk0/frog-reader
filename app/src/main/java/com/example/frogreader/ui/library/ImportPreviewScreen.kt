@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.library
 
+import androidx.compose.runtime.getValue
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -29,14 +30,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -133,31 +132,9 @@ fun ImportPreviewScreen(
 
             Box(
                 modifier = Modifier
-                    // BEFORE the shadow and the clip, so the glow is painted
-                    // outside them and can spill past the cover's edges. It is
-                    // a draw, not a layout: the old version put the glow in a
-                    // 300dp box around a 224dp cover, and those 38dp of nothing
-                    // above and below were the gap under the artwork.
-                    .drawBehind {
-                        val colour = accent ?: return@drawBehind
-                        drawCircle(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    colour.copy(alpha = 0.85f * glow),
-                                    colour.copy(alpha = 0.34f * glow),
-                                    Color.Transparent,
-                                ),
-                                center = center,
-                                radius = size.height * 0.92f,
-                            ),
-                            radius = size.height * 0.92f,
-                        )
-                    }
                     .size(width = 186.dp, height = 274.dp)
-                    .shadow(22.dp, RoundedCornerShape(16.dp))
                     .clip(RoundedCornerShape(16.dp))
-                    .background(scheme.surfaceContainerHighest)
-,
+                    .background(scheme.surfaceContainerHighest),
                 contentAlignment = Alignment.Center,
             ) {
                 if (staged.coverBytes != null) {

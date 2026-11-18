@@ -1,5 +1,9 @@
 package com.example.frogreader.ui.settings
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.cardSurface
+import androidx.compose.runtime.getValue
 import com.example.frogreader.ui.theme.floatingSurface
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -41,7 +45,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -118,8 +121,9 @@ internal fun BackupSettingsPage(
         )
         Spacer(Modifier.height(24.dp))
         SettingsSectionLabel(stringResource(R.string.backup_include_now_section))
-        SettingsCard(modifier = Modifier.selectableGroup()) {
+        SettingsRows(modifier = Modifier.selectableGroup()) {
             BackupScopeRow(
+                shape = connectedCardShape(last = false),
                 selected = settings.backupMode == BackupMode.DATA,
                 title = stringResource(R.string.backup_mode_data_short),
                 subtitle = stringResource(R.string.backup_mode_data_compact_desc),
@@ -128,6 +132,7 @@ internal fun BackupSettingsPage(
                 onClick = { onUpdate { it.copy(backupMode = BackupMode.DATA) } },
             )
             BackupScopeRow(
+                shape = connectedCardShape(first = false),
                 selected = settings.backupMode == BackupMode.FULL,
                 title = stringResource(R.string.backup_mode_full_short),
                 subtitle = stringResource(R.string.backup_mode_full_compact_desc),
@@ -143,26 +148,29 @@ internal fun BackupSettingsPage(
 
         Spacer(Modifier.height(24.dp))
         SettingsSectionLabel(stringResource(R.string.backup_automatic_section))
-        SettingsCard {
-            BackupFolderRow(
-                folder = folder,
-                enabled = controlsEnabled,
-                onChange = { pickFolder.launch(null) },
-            )
-            SettingsDivider()
-            SettingsControlRow(
-                icon = Icons.Rounded.Schedule,
-                title = stringResource(R.string.backup_frequency_title),
-                subtitle = pluralStringResource(R.plurals.backup_frequency_subtitle, BackupRepository.DEFAULT_KEEP, BackupRepository.DEFAULT_KEEP),
-                selected = frequency,
-                options = listOf(
-                    BackupFrequency.OFF to stringResource(R.string.backup_schedule_off),
-                    BackupFrequency.DAILY to stringResource(R.string.backup_frequency_daily_short),
-                    BackupFrequency.WEEKLY to stringResource(R.string.backup_frequency_weekly_short),
-                ),
-                onSelected = viewModel::setFrequency,
-                enabled = folder != null && controlsEnabled,
-            )
+        SettingsRows {
+            SettingsCardRow(last = false) {
+                BackupFolderRow(
+                    folder = folder,
+                    enabled = controlsEnabled,
+                    onChange = { pickFolder.launch(null) },
+                )
+            }
+            SettingsCardRow(first = false) {
+                SettingsControlRow(
+                    icon = Icons.Rounded.Schedule,
+                    title = stringResource(R.string.backup_frequency_title),
+                    subtitle = pluralStringResource(R.plurals.backup_frequency_subtitle, BackupRepository.DEFAULT_KEEP, BackupRepository.DEFAULT_KEEP),
+                    selected = frequency,
+                    options = listOf(
+                        BackupFrequency.OFF to stringResource(R.string.backup_schedule_off),
+                        BackupFrequency.DAILY to stringResource(R.string.backup_frequency_daily_short),
+                        BackupFrequency.WEEKLY to stringResource(R.string.backup_frequency_weekly_short),
+                    ),
+                    onSelected = viewModel::setFrequency,
+                    enabled = folder != null && controlsEnabled,
+                )
+            }
         }
         if (folder == null) {
             SettingsHelper(stringResource(R.string.backup_folder_hint))
@@ -188,16 +196,17 @@ internal fun BackupSettingsPage(
 
                 snapshots.isEmpty() -> SettingsHelper(stringResource(R.string.backup_snapshots_empty))
 
-                else -> SettingsCard {
+                else -> SettingsRows {
                     snapshots.forEachIndexed { index, snapshot ->
-                        SnapshotRow(
-                            snapshot = snapshot,
-                            enabled = controlsEnabled &&
-                                !snapshotsLoading &&
-                                snapshotsFolderUri == folder,
-                            onRestore = { viewModel.inspect(snapshot) },
-                        )
-                        if (index != snapshots.lastIndex) SettingsDivider(start = 54.dp)
+                        SettingsCardRow(first = index == 0, last = index == snapshots.lastIndex) {
+                            SnapshotRow(
+                                snapshot = snapshot,
+                                enabled = controlsEnabled &&
+                                    !snapshotsLoading &&
+                                    snapshotsFolderUri == folder,
+                                onRestore = { viewModel.inspect(snapshot) },
+                            )
+                        }
                     }
                 }
             }
@@ -357,36 +366,20 @@ internal fun BackupScopeRow(
     estimate: String,
     enabled: Boolean,
     onClick: () -> Unit,
+    shape: RoundedCornerShape = connectedCardShape(),
 ) {
+    val colors = MaterialTheme.colorScheme
     Row(
         modifier = Modifier
-            .padding(8.dp)
             .fillMaxWidth()
-            .clip(SettingsRowShape)
-            .background(
-                if (selected) MaterialTheme.colorScheme.primaryContainer else
-                    MaterialTheme.colorScheme.surfaceContainerLowest,
-            )
-            .selectable(
-                selected = selected,
-                enabled = enabled,
-                role = Role.RadioButton,
-                onClick = onClick,
-            )
-            .padding(12.dp),
+            .clip(shape)
+            .background(if (selected) colors.secondaryContainer else colors.cardSurface)
+            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .alpha(if (enabled) 1f else 0.55f),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            modifier = Modifier.alpha(if (enabled) 1f else 0.55f),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            BackupScopeRowContent(
-                selected = selected,
-                title = title,
-                subtitle = subtitle,
-                estimate = estimate,
-            )
-        }
+        BackupScopeRowContent(selected, title, subtitle, estimate)
     }
 }
 
@@ -398,8 +391,8 @@ private fun BackupScopeRowContent(
     estimate: String,
 ) {
     val scheme = MaterialTheme.colorScheme
-    val titleColor = if (selected) scheme.onPrimaryContainer else scheme.onSurface
-    val captionColor = if (selected) scheme.onPrimaryContainer else scheme.onSurfaceVariant
+    val titleColor = if (selected) scheme.onSecondaryContainer else scheme.onSurface
+    val captionColor = if (selected) scheme.onSecondaryContainer else scheme.onSurfaceVariant
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -407,7 +400,7 @@ private fun BackupScopeRowContent(
         Icon(
             imageVector = if (selected) Icons.Rounded.CheckCircle else Icons.Rounded.RadioButtonUnchecked,
             contentDescription = null,
-            tint = if (selected) scheme.onPrimaryContainer else scheme.outline,
+            tint = if (selected) scheme.onSecondaryContainer else scheme.outline,
             modifier = Modifier.size(22.dp),
         )
         Spacer(Modifier.width(14.dp))

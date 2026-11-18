@@ -21,7 +21,7 @@ import com.example.frogreader.ui.reader.readerColors
 import com.example.frogreader.ui.settings.SettingsEntryPage
 
 /** Live controls with memory-only settings, including the screenshot's paged mode. */
-@Preview(name = "Beige · reader settings", widthDp = 393, heightDp = 882)
+@Preview(name = "Beige · warm reader controls", widthDp = 393, heightDp = 882)
 @Preview(name = "Beige · reader settings · large text", widthDp = 360, heightDp = 800, fontScale = 1.5f)
 @Composable
 private fun BeigeReaderSettingsPreview() = FrogReaderTheme(AppTheme.SEPIA) {

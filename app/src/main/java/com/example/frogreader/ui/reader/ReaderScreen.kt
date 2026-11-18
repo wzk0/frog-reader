@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.reader
 
+import androidx.compose.runtime.setValue
 import com.example.frogreader.ui.components.FrogSnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarDuration
@@ -33,7 +34,6 @@ import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.magnifier
 import androidx.compose.foundation.rememberScrollState
@@ -58,7 +58,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBarsIgnoringVisibility
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -96,7 +95,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableIntState
 import androidx.compose.runtime.getValue
@@ -109,7 +107,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -118,6 +115,7 @@ import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -144,9 +142,6 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.draw.dropShadow
-import androidx.compose.ui.graphics.shadow.Shadow
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.LinkInteractionListener
@@ -158,7 +153,6 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.SolidColor
@@ -167,7 +161,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.Velocity
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -197,7 +190,6 @@ import com.example.frogreader.data.model.ParagraphStyle
 import com.example.frogreader.data.model.Quote
 import com.example.frogreader.data.model.QuoteColor
 import com.example.frogreader.data.model.ReaderChromeStyle
-import com.example.frogreader.ui.reader.selection.BookSelection
 import com.example.frogreader.ui.reader.selection.BookAnchor
 import com.example.frogreader.ui.reader.selection.ReaderHighlights
 import com.example.frogreader.ui.reader.selection.QuoteHighlight
@@ -223,7 +215,6 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
-import java.io.File
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -1521,19 +1512,10 @@ private fun ReaderReturnButton(
     containerColor: Color,
 ) {
     val shape = RoundedCornerShape(24.dp)
-    val light = colors.background.luminance() > 0.5f
     // Even a non-clickable Material Surface installs a pointer-input barrier.
     // Use a drawing-only Box so the exit animation cannot intercept bar taps.
     Box(
         modifier = Modifier
-            .dropShadow(
-                shape,
-                Shadow(
-                    radius = if (light) 5.dp else 6.dp,
-                    offset = DpOffset(0.dp, if (light) 1.dp else 2.dp),
-                    color = colors.shadow.copy(alpha = if (light) 0.10f else 0.16f),
-                ),
-            )
             .background(containerColor, shape)
             .clip(shape)
             .then(
@@ -1805,7 +1787,6 @@ private fun LinkedDocumentOverlay(
         Surface(
             color = colors.chrome,
             contentColor = colors.onChrome,
-            shadowElevation = 4.dp,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth(),
@@ -3243,7 +3224,6 @@ private fun BrightnessOverlay(
             color = colors.chrome,
             contentColor = colors.onChrome,
             shape = RoundedCornerShape(20.dp),
-            shadowElevation = 4.dp,
             modifier = Modifier.padding(start = 20.dp),
         ) {
             Row(
@@ -3998,7 +3978,20 @@ private fun ReaderTopBar(
                             onClick = onCloseSearch,
                             chromeStyle = chromeStyle,
                         )
-                        Box(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                        Box(
+                            Modifier.weight(1f).padding(horizontal = 12.dp)
+                                .drawBehind {
+                                    val line = 1.dp.toPx()
+                                    drawLine(
+                                        color = colors.accent,
+                                        start = Offset(0f, size.height - line / 2),
+                                        end = Offset(size.width, size.height - line / 2),
+                                        strokeWidth = line,
+                                    )
+                                }
+                                .padding(vertical = 5.dp),
+                            contentAlignment = Alignment.CenterStart,
+                        ) {
                             if (searchQuery.isEmpty()) {
                                 Text(
                                     text = stringResource(R.string.reader_search_placeholder),

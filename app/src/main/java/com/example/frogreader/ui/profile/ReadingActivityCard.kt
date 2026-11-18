@@ -1,14 +1,13 @@
 package com.example.frogreader.ui.profile
 
-import androidx.compose.animation.AnimatedVisibility
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.connectedCard
+import com.example.frogreader.ui.components.ConnectedCardGap
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,29 +22,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.LocalFireDepartment
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderState
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.Layout
@@ -55,7 +47,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.progressBarRangeInfo
@@ -86,67 +77,63 @@ internal fun ReadingActivityCard(
     var draftGoal by rememberSaveable(goalMinutes) { mutableIntStateOf(readingGoalMinutes(goalMinutes.toFloat())) }
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf(false) }
-    var goalExpanded by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val activity = remember(stats, today, draftGoal) { readingActivity(stats, draftGoal, today) }
     val scheme = MaterialTheme.colorScheme
     val haptics = LocalHapticFeedback.current
 
-    Surface(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = scheme.surfaceContainerLowest,
-        shadowElevation = 2.dp,
+        verticalArrangement = Arrangement.spacedBy(ConnectedCardGap),
     ) {
         Column(
-            Modifier.padding(horizontal = 14.dp, vertical = if (compact) 8.dp else 12.dp),
+            Modifier.fillMaxWidth()
+                .connectedCard(scheme, connectedCardShape(last = false))
+                .padding(horizontal = 18.dp, vertical = if (compact) 12.dp else 16.dp),
             verticalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 8.dp),
         ) {
             ActivityHeading(activity)
             TodayProgress(activity, draftGoal)
             WeekReadingDays(activity.weekDays, compact)
-            HorizontalDivider(color = scheme.outlineVariant.copy(alpha = 0.5f))
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(stringResource(R.string.stats_goal_label), Modifier.weight(1f),
-                        style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
-                    GoalToggle(minutes = draftGoal, expanded = goalExpanded, onToggle = { goalExpanded = !goalExpanded })
-                }
-                // The ruler is a rare edit, so it stays tucked away until asked for.
-                AnimatedVisibility(
-                    visible = goalExpanded,
-                    enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
-                    exit = shrinkVertically(shrinkTowards = Alignment.Top) + fadeOut(),
-                ) {
-                    GoalRuler(
-                        minutes = draftGoal,
-                        enabled = !saving,
-                        onChange = { value ->
-                            if (value != draftGoal) {
-                                draftGoal = value
-                                saveError = false
-                                haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
-                            }
-                        },
-                        onFinished = {
-                            if (draftGoal != goalMinutes && !saving) {
-                                val requestedGoal = draftGoal
-                                saving = true
-                                scope.launch {
-                                    try {
-                                        onSaveGoal(requestedGoal)
-                                    } catch (_: IOException) {
-                                        draftGoal = readingGoalMinutes(goalMinutes.toFloat())
-                                        saveError = true
-                                    } finally {
-                                        saving = false
-                                    }
-                                }
-                            }
-                        },
-                    )
-                }
+        }
+        Column(
+            Modifier.fillMaxWidth()
+                .connectedCard(scheme, connectedCardShape(first = false))
+                .padding(horizontal = 18.dp, vertical = if (compact) 12.dp else 16.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.stats_goal_label), Modifier.weight(1f),
+                    style = MaterialTheme.typography.labelLarge, color = scheme.onSurfaceVariant)
+                Text(stringResource(R.string.stats_goal_minutes, draftGoal),
+                    style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = scheme.primary)
             }
+            GoalRuler(
+                minutes = draftGoal,
+                enabled = !saving,
+                onChange = { value ->
+                    if (value != draftGoal) {
+                        draftGoal = value
+                        saveError = false
+                        haptics.performHapticFeedback(HapticFeedbackType.SegmentFrequentTick)
+                    }
+                },
+                onFinished = {
+                    if (draftGoal != goalMinutes && !saving) {
+                        val requestedGoal = draftGoal
+                        saving = true
+                        scope.launch {
+                            try {
+                                onSaveGoal(requestedGoal)
+                            } catch (_: IOException) {
+                                draftGoal = readingGoalMinutes(goalMinutes.toFloat())
+                                saveError = true
+                            } finally {
+                                saving = false
+                            }
+                        }
+                    }
+                },
+            )
             if (saveError) Text(stringResource(R.string.profile_goal_save_error),
                 color = scheme.error, style = MaterialTheme.typography.bodySmall)
         }
@@ -246,30 +233,6 @@ private fun WeekReadingDays(days: List<ReadingDay>, compact: Boolean) {
                     style = MaterialTheme.typography.labelSmall, color = scheme.onSurfaceVariant, maxLines = 1)
             }
         }
-    }
-}
-
-@Composable
-private fun GoalToggle(minutes: Int, expanded: Boolean, onToggle: () -> Unit) {
-    val scheme = MaterialTheme.colorScheme
-    val rotation by animateFloatAsState(if (expanded) 180f else 0f, label = "goalChevron")
-    val actionLabel = stringResource(if (expanded) R.string.profile_goal_done else R.string.profile_goal_edit)
-    val state = stringResource(if (expanded) R.string.profile_goal_expanded else R.string.profile_goal_collapsed)
-    Row(
-        Modifier.minimumInteractiveComponentSize()
-            .clip(CircleShape)
-            .background(scheme.surfaceContainer)
-            .clickable(role = Role.Button, onClickLabel = actionLabel, onClick = onToggle)
-            .semantics { stateDescription = state }
-            .heightIn(min = 36.dp)
-            .padding(start = 14.dp, end = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Text(stringResource(R.string.stats_goal_minutes, minutes),
-            style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = scheme.primary)
-        Icon(Icons.Rounded.KeyboardArrowDown, null, Modifier.size(20.dp).rotate(rotation),
-            tint = scheme.onSurfaceVariant)
     }
 }
 

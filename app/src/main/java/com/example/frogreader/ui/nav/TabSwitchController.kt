@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.nav
 
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -10,12 +12,21 @@ internal class TabSwitchController(
     private val switchPage: suspend (Int) -> Unit,
 ) {
     private var transition: Job? = null
-    private var requestedPage: Int? = null
+    private var requestId = 0
+    private val _requestedPage = MutableStateFlow<Int?>(null)
+    val requestedPage = _requestedPage.asStateFlow()
 
     fun select(page: Int) {
-        if (transition?.isActive == true && requestedPage == page) return
+        if (transition?.isActive == true && _requestedPage.value == page) return
+        val id = ++requestId
         transition?.cancel()
-        requestedPage = page
-        transition = scope.launch { switchPage(page) }
+        _requestedPage.value = page
+        transition = scope.launch {
+            try {
+                switchPage(page)
+            } finally {
+                if (requestId == id) _requestedPage.value = null
+            }
+        }
     }
 }

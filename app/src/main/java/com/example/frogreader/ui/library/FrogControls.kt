@@ -25,13 +25,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -41,10 +42,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -104,7 +103,6 @@ internal fun FrogHeaderContent(
                 onQueryChange = onQueryChange,
                 hint = searchHint,
                 enabled = searchEnabled,
-                containerColor = controlColor,
                 modifier = Modifier.weight(1f),
             )
             GlassIconButton(
@@ -157,13 +155,6 @@ internal fun MorphingButton(
     ) { content() }
 }
 
-/**
- * The rounded glass search pill from the library header.
- *
- * Deliberately not an OutlinedTextField: nothing else in this app has a hairline
- * box drawn around it, and one appearing on a single screen reads as a control
- * borrowed from a different program.
- */
 @Composable
 internal fun FrogSearchField(
     query: String,
@@ -171,63 +162,24 @@ internal fun FrogSearchField(
     hint: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    containerColor: Color? = null,
 ) {
-    val frog = LocalFrogColors.current
-
-    Row(
-        modifier = modifier
-            .height(44.dp)
-            .clip(RoundedCornerShape(22.dp))
-            .background(containerColor ?: frog.glass)
-            .then(if (enabled) Modifier else Modifier.semantics(mergeDescendants = true) { disabled() })
-            .padding(horizontal = 14.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(9.dp),
-    ) {
-        Icon(
-            imageVector = Icons.Rounded.Search,
-            contentDescription = null,
-            tint = frog.ink2,
-            modifier = Modifier.size(19.dp),
-        )
-        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-            if (query.isEmpty()) {
-                Text(
-                    text = hint,
-                    fontSize = 14.sp,
-                    lineHeight = 18.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = frog.ink2,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+    OutlinedTextField(
+        value = query,
+        onValueChange = onQueryChange,
+        modifier = modifier,
+        enabled = enabled,
+        singleLine = true,
+        shape = RoundedCornerShape(28.dp),
+        placeholder = { Text(hint, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
+        trailingIcon = if (enabled && query.isNotEmpty()) {
+            {
+                IconButton(onClick = { onQueryChange("") }) {
+                    Icon(Icons.Rounded.Close, stringResource(R.string.library_search_clear))
+                }
             }
-            if (enabled) BasicTextField(
-                value = query,
-                onValueChange = onQueryChange,
-                singleLine = true,
-                textStyle = TextStyle(
-                    fontSize = 14.sp,
-                    lineHeight = 18.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = frog.ink,
-                ),
-                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        if (enabled && query.isNotEmpty()) {
-            Icon(
-                imageVector = Icons.Rounded.Close,
-                contentDescription = stringResource(R.string.library_search_clear),
-                tint = frog.ink2,
-                modifier = Modifier
-                    .size(19.dp)
-                    .clickable { onQueryChange("") },
-            )
-        }
-    }
+        } else null,
+    )
 }
 
 /** The circular chrome button the library uses for settings and close. */

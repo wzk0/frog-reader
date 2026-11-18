@@ -19,6 +19,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
+import com.example.frogreader.ui.components.FlatDropdownMenu as DropdownMenu
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -260,7 +261,7 @@ internal fun BookInfoContent(
                         if (state.sharing) CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
                         else Icon(Icons.Rounded.MoreVert, stringResource(R.string.metadata_more_actions))
                     }
-                    DropdownMenu(menu, { menu = false }, containerColor = colors.floatingSurface, tonalElevation = 0.dp) {
+                    DropdownMenu(menu, { menu = false }, tonalElevation = 0.dp) {
                         if (!editing) {
                             if (state.fileAvailable) DropdownMenuItem(text = { Text(stringResource(R.string.book_info_share)) },
                                 leadingIcon = { Icon(Icons.Rounded.Share, null) }, onClick = { menu = false; onShare() })

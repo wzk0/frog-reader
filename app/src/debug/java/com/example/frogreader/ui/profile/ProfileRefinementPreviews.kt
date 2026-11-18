@@ -62,7 +62,6 @@ private fun ProfileMenuPreview(theme: AppTheme) {
                     shape = RoundedCornerShape(20.dp),
                     color = colors.floatingSurface,
                     tonalElevation = 0.dp,
-                    shadowElevation = 6.dp,
                     border = BorderStroke(1.dp, colors.outlineVariant),
                 ) {
                     Column(Modifier.padding(vertical = 8.dp)) { ProfileOptionsMenuItems({}, {}) }

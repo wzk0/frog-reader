@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.settings
 
+import androidx.compose.runtime.getValue
 import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -34,7 +35,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -194,7 +194,6 @@ private fun MiniLibrary(
             shape = RoundedCornerShape(unit * 16),
             color = if (dark) scheme.surfaceContainerHigh else scheme.background,
             border = border,
-            shadowElevation = 2.dp,
             tonalElevation = 0.dp,
         ) {
             Column(
@@ -209,7 +208,6 @@ private fun MiniLibrary(
                     shape = RoundedCornerShape(unit * 10),
                     color = cardSurface,
                     tonalElevation = 0.dp,
-                    shadowElevation = 1.dp,
                 ) {
                     Row(
                         Modifier.padding(unit * 7),
@@ -245,7 +243,6 @@ private fun MiniLibrary(
                     shape = RoundedCornerShape(50),
                     color = cardSurface,
                     tonalElevation = 0.dp,
-                    shadowElevation = 1.dp,
                 ) {
                     Row(
                         Modifier.padding(horizontal = unit * 8, vertical = unit * 4),

@@ -41,7 +41,6 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -242,25 +241,10 @@ private fun MiniReaderChrome(
                     val unit = size.width / 144f
                     val textMark = colors.secondaryText.copy(alpha = .55f)
                     val chromeMark = colors.onChromeVariant.copy(alpha = .6f)
-                    val shadowHeight = 8f
-                    val classicTopShadow = if (floating) null else Brush.verticalGradient(
-                        colors = listOf(colors.shadow.copy(alpha = .2f), colors.shadow.copy(alpha = 0f)),
-                        startY = topY + 26f,
-                        endY = topY + 26f + shadowHeight,
-                    )
-                    val classicBottomShadow = if (floating) null else Brush.verticalGradient(
-                        colors = listOf(colors.shadow.copy(alpha = 0f), colors.shadow.copy(alpha = .2f)),
-                        startY = bottomY - shadowHeight,
-                        endY = bottomY,
-                    )
                     onDrawBehind {
                         withTransform({ scale(unit, unit, pivot = Offset.Zero) }) {
                             val panelX = if (floating) 8f else 0f
                             val panelWidth = if (floating) 128f else 144f
-                            if (classicTopShadow != null && classicBottomShadow != null) {
-                                drawRect(classicTopShadow, Offset(0f, topY + 26f), Size(panelWidth, shadowHeight))
-                                drawRect(classicBottomShadow, Offset(0f, bottomY - shadowHeight), Size(panelWidth, shadowHeight))
-                            }
                             drawMiniPanel(colors, panelX, topY, panelWidth, 26f, if (floating) 13f else 0f)
                             // Classic extends to the bottom edge with breathing room below the rail.
                             drawMiniPanel(colors, panelX, bottomY, panelWidth, if (floating) 32f else 40f, if (floating) 15f else 0f)
@@ -311,20 +295,7 @@ private fun MiniReaderIcon(icon: ImageVector, tint: Color, unit: Dp, x: Float, y
     )
 }
 
-/** Cached rounded shadow layers match Classic's gradient without a blur pass. */
 private fun DrawScope.drawMiniPanel(colors: ReaderColors, x: Float, y: Float, width: Float, height: Float, radius: Float) {
-    if (radius > 0f) {
-        val shadow = colors.shadow.copy(alpha = .014f)
-        for (layer in 16 downTo 1) {
-            val spread = layer * .5f
-            drawRoundRect(
-                color = shadow,
-                topLeft = Offset(x - spread, y - spread + .75f),
-                size = Size(width + 2f * spread, height + 2f * spread),
-                cornerRadius = CornerRadius(radius + spread),
-            )
-        }
-    }
     drawRoundRect(colors.chrome, Offset(x, y), Size(width, height), CornerRadius(radius))
 }
 

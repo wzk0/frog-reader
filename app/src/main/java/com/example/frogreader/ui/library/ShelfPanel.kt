@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.library
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
@@ -19,6 +21,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -42,12 +45,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,8 +86,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.unit.lerp
-import androidx.compose.foundation.layout.imeAnimationTarget
-import androidx.compose.foundation.layout.imeAnimationSource
 import androidx.compose.foundation.layout.requiredHeight
 
 /** Scale the open-folder panel grows out of its tile from. */
@@ -254,7 +253,6 @@ internal fun ShelfPanel(
             Surface(
                 shape = RoundedCornerShape(34.dp),
                 color = scheme.surfaceContainerLowest,
-                shadowElevation = 24.dp,
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(horizontal = 16.dp, vertical = 24.dp)
@@ -400,7 +398,7 @@ private fun ShelfHeader(
             // out for a 44dp field made the whole card jump a centimetre the
             // moment the magnifier was tapped.
             Box(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).heightIn(min = 56.dp),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 Column(modifier = Modifier.graphicsLayer { alpha = 1f - reveal }) {

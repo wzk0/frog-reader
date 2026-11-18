@@ -194,7 +194,7 @@ jobs:
           sha256sum ./*.apk > SHA256SUMS.txt
           cat SHA256SUMS.txt
           {
-            echo "RELEASE_TITLE=Frog Reader $version_name"
+            echo "RELEASE_TITLE=青蛙阅读 $version_name"
           } >> "$GITHUB_ENV"
 
       # 只收集 Release 目录，绝不收集 Debug APK

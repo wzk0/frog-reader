@@ -75,12 +75,11 @@ internal fun CascadePage(
     }
 }
 
-/** Draw cached, undistorted text with a rounded paper edge and a soft shadow. */
+/** Draw cached, undistorted text with a rounded paper edge. */
 private class CascadePageRenderer(private val colors: ReaderColors) {
     private val geometry = CascadePageGeometry()
     private val paperPath = Path()
     private val paperPaint = Paint().apply { color = colors.background.toArgb() }
-    private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = colors.shadow.toArgb() }
 
     fun draw(
         scope: DrawScope,
@@ -109,17 +108,6 @@ private class CascadePageRenderer(private val colors: ReaderColors) {
                 val sheetX = if (underneath || resting) 0f else geometry.frontTranslationX
                 canvas.translate(sheetX, 0f)
                 val radius = geometry.cornerRadius
-                val spread = radius * 0.22f
-                // Nested translucent contours approximate a small soft shadow
-                // without bitmap readbacks or API 28+ hardware blur effects.
-                shadowPaint.alpha = (255f * 0.10f / SHADOW_STEPS).toInt()
-                for (step in SHADOW_STEPS downTo 1) {
-                    val outset = spread * step / SHADOW_STEPS
-                    canvas.drawRoundRect(
-                        -outset, -outset, width + outset, height + outset,
-                        radius + outset, radius + outset, shadowPaint,
-                    )
-                }
                 paperPath.rewind()
                 paperPath.addRoundRect(0f, 0f, width, height, radius, radius, Path.Direction.CW)
                 canvas.clipPath(paperPath)
@@ -136,6 +124,5 @@ private class CascadePageRenderer(private val colors: ReaderColors) {
     }
 
     private companion object {
-        const val SHADOW_STEPS = 6
     }
 }

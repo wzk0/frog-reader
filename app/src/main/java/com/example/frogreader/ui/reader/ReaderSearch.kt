@@ -1,5 +1,10 @@
 package com.example.frogreader.ui.reader
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.connectedCard
+import com.example.frogreader.ui.components.ConnectedCardGap
 import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
@@ -9,7 +14,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -23,10 +27,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Search
@@ -38,10 +40,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -314,6 +314,8 @@ fun ReaderSearchOverlay(
                         itemsIndexed(current.matches) { index, match ->
                             SearchResultRow(
                                 match = match,
+                                modifier = Modifier.animateItem().padding(bottom = ConnectedCardGap)
+                                    .connectedCard(MaterialTheme.colorScheme, connectedCardShape(index, current.matches.size)),
                                 chapterTitle = chapterTitles.getOrNull(match.chapterIndex),
                                 page = matchPages?.getOrNull(index),
                                 colors = colors,
@@ -409,6 +411,7 @@ private fun GoToPageCard(
 @Composable
 private fun SearchResultRow(
     match: SearchMatch,
+    modifier: Modifier,
     chapterTitle: String?,
     page: Int?,
     colors: ReaderColors,
@@ -416,9 +419,8 @@ private fun SearchResultRow(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 10.dp),
     ) {

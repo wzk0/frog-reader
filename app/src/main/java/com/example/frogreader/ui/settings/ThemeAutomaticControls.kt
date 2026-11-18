@@ -28,24 +28,27 @@ internal fun ThemeAutomaticControls(
     enabled: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier) {
-        SettingsSwitchRow(
-            icon = Icons.Rounded.Brightness4,
-            title = stringResource(R.string.settings_follow_system),
-            subtitle = if (settings.followSystemTheme) {
-                stringResource(R.string.settings_follow_system_on_subtitle)
-            } else {
-                stringResource(
-                    R.string.settings_follow_system_off_subtitle,
-                    stringResource(settings.theme.displayNameRes),
-                )
-            },
-            checked = settings.followSystemTheme,
-            onCheckedChange = { followSystem ->
-                onUpdate { it.copy(followSystemTheme = followSystem) }
-            },
-            enabled = enabled,
-        )
+    val hasDynamicColor = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+    SettingsRows(modifier = modifier) {
+        SettingsCardRow(last = !settings.followSystemTheme && !hasDynamicColor) {
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Brightness4,
+                title = stringResource(R.string.settings_follow_system),
+                subtitle = if (settings.followSystemTheme) {
+                    stringResource(R.string.settings_follow_system_on_subtitle)
+                } else {
+                    stringResource(
+                        R.string.settings_follow_system_off_subtitle,
+                        stringResource(settings.theme.displayNameRes),
+                    )
+                },
+                checked = settings.followSystemTheme,
+                onCheckedChange = { followSystem ->
+                    onUpdate { it.copy(followSystemTheme = followSystem) }
+                },
+                enabled = enabled,
+            )
+        }
 
         AnimatedVisibility(
             visible = settings.followSystemTheme,
@@ -53,36 +56,38 @@ internal fun ThemeAutomaticControls(
             exit = shrinkVertically(tween(200)) + fadeOut(tween(150)),
         ) {
             Column {
-                SettingsDivider()
-                SettingsControlRow(
-                    icon = Icons.Rounded.LightMode,
-                    title = stringResource(R.string.settings_light_theme_default),
-                    subtitle = stringResource(R.string.settings_light_theme_default_subtitle),
-                    selected = settings.lightThemeDefault,
-                    options = listOf(
-                        LightThemeDefault.LIGHT to stringResource(R.string.theme_light),
-                        LightThemeDefault.BEIGE to stringResource(R.string.theme_beige),
-                    ),
-                    onSelected = { selected ->
-                        onUpdate { it.copy(lightThemeDefault = selected) }
+                SettingsCardRow(first = false, last = !hasDynamicColor) {
+                    SettingsControlRow(
+                        icon = Icons.Rounded.LightMode,
+                        title = stringResource(R.string.settings_light_theme_default),
+                        subtitle = stringResource(R.string.settings_light_theme_default_subtitle),
+                        selected = settings.lightThemeDefault,
+                        options = listOf(
+                            LightThemeDefault.LIGHT to stringResource(R.string.theme_light),
+                            LightThemeDefault.BEIGE to stringResource(R.string.theme_beige),
+                        ),
+                        onSelected = { selected ->
+                            onUpdate { it.copy(lightThemeDefault = selected) }
+                        },
+                        enabled = enabled,
+                    )
+                }
+            }
+        }
+
+        if (hasDynamicColor) {
+            SettingsCardRow(first = false) {
+                SettingsSwitchRow(
+                    icon = Icons.Rounded.Colorize,
+                    title = stringResource(R.string.settings_dynamic_color),
+                    subtitle = stringResource(R.string.settings_dynamic_color_subtitle),
+                    checked = settings.dynamicColor,
+                    onCheckedChange = { dynamicColor ->
+                        onUpdate { it.copy(dynamicColor = dynamicColor) }
                     },
                     enabled = enabled,
                 )
             }
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            SettingsDivider()
-            SettingsSwitchRow(
-                icon = Icons.Rounded.Colorize,
-                title = stringResource(R.string.settings_dynamic_color),
-                subtitle = stringResource(R.string.settings_dynamic_color_subtitle),
-                checked = settings.dynamicColor,
-                onCheckedChange = { dynamicColor ->
-                    onUpdate { it.copy(dynamicColor = dynamicColor) }
-                },
-                enabled = enabled,
-            )
         }
     }
 }

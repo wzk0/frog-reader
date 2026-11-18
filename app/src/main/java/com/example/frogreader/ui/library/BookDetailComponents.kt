@@ -48,7 +48,7 @@ internal fun BookDetailField(
     val lineColor = when {
         isError -> colors.error
         focused -> colors.primary
-        else -> colors.outlineVariant
+        else -> colors.outline
     }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         label?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant) }

@@ -18,7 +18,7 @@
     <string name="reading_log_external">其他应用</string>
     <string name="reading_log_partial_order_hint">拖动把手可设置同一回忆月份或年份内的顺序。</string>
     <string name="reading_log_period">阅读期间</string>
-    <string name="reading_log_frogreader">FrogReader</string>
+    <string name="reading_log_frogreader">@string/app_short_name</string>
     <string name="reading_log_finished">已读完</string>
     <string name="reading_log_in_progress">在读</string>
     <string name="reading_log_abandoned">已放弃</string>

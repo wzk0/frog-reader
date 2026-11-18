@@ -24,6 +24,7 @@ import com.example.frogreader.ui.settings.SettingsEntryPage
 
 /** Actual screen components with in-memory data; no repositories or device writes. */
 @Preview(name = "Light · settings", widthDp = 393, heightDp = 852, showSystemUi = true)
+@Preview(name = "Light · connected settings · large text", widthDp = 320, heightDp = 800, fontScale = 1.5f)
 @Composable
 private fun LightSettingsPreview() {
     FrogReaderTheme(AppTheme.WHITE) {
@@ -59,7 +60,7 @@ private fun LightBookInfoPreview() {
     }
 }
 
-@Preview(name = "Light · reader controls", widthDp = 393, heightDp = 852)
+@Preview(name = "Light · reader settings contrast", widthDp = 393, heightDp = 852)
 @Composable
 private fun LightReaderControlsPreview() {
     FrogReaderTheme(AppTheme.WHITE) {

@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.reader
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import android.os.Build
 import android.os.SystemClock
 import androidx.compose.animation.AnimatedVisibilityScope
@@ -24,14 +26,12 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -53,22 +53,15 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.key
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.graphics.LayerOutsets
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -98,19 +91,15 @@ import com.example.frogreader.data.model.ReaderChromeStyle
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
-/** Fade the whole bar with room for its shadow, without changing its measured bounds. */
+/** Fade the whole bar without changing its measured bounds. */
 @Composable
 internal fun AnimatedVisibilityScope.readerBarFade(): Modifier {
     val opacity = transition.animateFloat(
         transitionSpec = { spring(stiffness = Spring.StiffnessMediumLow) },
         label = "readerBarAlpha",
     ) { state -> if (state == EnterExitState.Visible) 1f else 0f }
-    val shadowOutsets = remember { LayerOutsets(horizontal = 12.dp, vertical = 12.dp) }
     return Modifier.graphicsLayer {
         alpha = opacity.value
-        // A default fade clips drawing to the bar's bounds while alpha < 1,
-        // hiding the classic edge shadow until the animation finishes.
-        outsets = shadowOutsets
     }
 }
 
@@ -127,28 +116,12 @@ internal fun ReaderBarSurface(
     val light = colors.background.luminance() > 0.5f
     // Full-width bars only need separation at the edge facing the page.
     // A single soft falloff avoids the dark seam of a divider plus elevation.
-    val edgeShadow = if (!floating && light) Modifier.drawBehind {
-        val depth = 6.dp.toPx()
-        val start = if (topBar) size.height else -depth
-        val ink = colors.shadow.copy(alpha = 0.055f)
-        val clear = colors.shadow.copy(alpha = 0f)
-        drawRect(
-            brush = Brush.verticalGradient(
-                colors = if (topBar) listOf(ink, clear) else listOf(clear, ink),
-                startY = start,
-                endY = start + depth,
-            ),
-            topLeft = Offset(0f, start),
-            size = Size(size.width, depth),
-        )
-    } else Modifier
     Surface(
         color = colors.chrome,
         contentColor = colors.onChrome,
         shape = if (floating) RoundedCornerShape(28.dp) else RectangleShape,
-        shadowElevation = if (floating) 2.dp else 0.dp,
         tonalElevation = 0.dp,
-        modifier = modifier.then(edgeShadow),
+        modifier = modifier,
     ) {
         Column {
             if (!floating && !light && !topBar) HorizontalDivider(thickness = 0.5.dp, color = colors.track)

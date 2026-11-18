@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.profile
 
+import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.ConnectedCardGap
 import com.example.frogreader.ui.components.FrogSnackbarHost
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -16,7 +18,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.*
@@ -228,7 +229,7 @@ internal fun ReadingLogContent(
             Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
                 if (!ready) CircularProgressIndicator(Modifier.align(Alignment.Center))
                 else LazyColumn(state = list, userScrollEnabled = enabled,
-                    contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(ConnectedCardGap)) {
                     item("log-summary") {
                         ReadingLogToolbar(entries, filter, sort, enabled,
                             onFilter = { filter = it; list.requestScrollToItem(0) }, onSort = { sortMenu = true },
@@ -256,7 +257,6 @@ internal fun ReadingLogContent(
                             .graphicsLayer {
                                 translationY = if (held) drag.translation(entry.id) else 0f
                                 scaleX = 1f + .012f * lift; scaleY = 1f + .012f * lift
-                                shadowElevation = 8.dp.toPx() * lift; shape = RoundedCornerShape(16.dp)
                             }.animateContentSize()) {
                             ReadingLogSwipeCard(entry, enabled, busy, actions.delete) { cardEnabled ->
                             ReadingLogCard(entry, coverOf(entry), held, cardEnabled, entry.id in reorderableIds,
@@ -268,7 +268,8 @@ internal fun ReadingLogContent(
                                     if (drag.start(entry.id, y)) haptic.performHapticFeedback(HapticFeedbackType.LongPress) else actions.endDrag(true)
                                 } }, { if (drag.id == entry.id) drag.drag(it) }, { cancel -> if (drag.id == entry.id) { drag.stop(); actions.endDrag(cancel) } },
                                 { list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == entry.id }?.offset ?: 0 },
-                                progressPercent = readingLogProgressPercent(entry, activeProgress[entry.id]))
+                                progressPercent = readingLogProgressPercent(entry, activeProgress[entry.id]),
+                                shape = connectedCardShape(index, visibleEntries.size))
                             }
                         }
                     }

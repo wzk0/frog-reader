@@ -103,7 +103,7 @@ private val ByName: Comparator<Book> = Comparator { a, b ->
 }
 
 /** Folder first, then file name inside it — the grouped order. */
-private val ByFolder: Comparator<Book> = Comparator { a, b ->
+internal val ByFolder: Comparator<Book> = Comparator { a, b ->
     var result = NaturalOrder.compare(a.sortFolder, b.sortFolder)
     if (result != 0) return@Comparator result
     result = NaturalOrder.compare(a.sortName, b.sortName)
