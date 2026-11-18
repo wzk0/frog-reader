@@ -1,108 +1,61 @@
-# FrogReader 🐸📖
+# 青蛙阅读 · 蛙阅
 
-**A beautiful, free and open-source e-book reader for Android.**
+青蛙阅读是 [FrogReader](https://github.com/KNITIPKA/frog-reader) 的简体中文分支，一款面向 Android 的开源电子书阅读器。可以把本地书籍整理进书架，按书调整排版，并用阅读记录、摘录和书签保存自己的阅读轨迹。日常阅读无需账号，也无需联网。
 
-> fork 版本主要添加了以下功能:
- - 全部汉化
- - 扫描文件夹时, 快捷添加书籍到书架(若有子文件夹, 可选择将各子文件夹添加为书架; 没有子文件夹则可选择将此文件夹内书籍添加至一个书架)
- - 按文件夹/文件名排序
- - 快捷字体下载
+[下载 APK](https://github.com/wzk0/frog-reader/releases) · [0.0.2 更新说明](docs/releases/0.0.2.md) · [反馈问题](https://github.com/wzk0/frog-reader/issues)
 
-Built with **Kotlin, Jetpack Compose and Material 3**, FrogReader combines a carefully designed native interface with a dedicated reading engine, a personal library and tools to track your reading — all without an account or cloud dependency.
+## 在原版基础上的改动
 
-[![Release](https://img.shields.io/badge/Release-BETA%202-2f7356?style=for-the-badge&logo=android&logoColor=white)](https://github.com/KNITIPKA/frog-reader/releases/tag/beta-2)
-[![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.0%2B-7F52FF?style=for-the-badge&logo=kotlin&logoColor=white)](https://kotlinlang.org/)
-[![Material 3](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?style=for-the-badge&logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
-[![CI](https://img.shields.io/github/actions/workflow/status/KNITIPKA/frog-reader/ci.yml?branch=main&label=CI&logo=github&style=for-the-badge)](https://github.com/KNITIPKA/frog-reader/actions/workflows/ci.yml)
-[![License](https://img.shields.io/badge/License-GPL--3.0--only-blue?style=for-the-badge)](LICENSE)
+- **简体中文界面**。书库、阅读器、设置、导入向导和错误提示均已本地化，应用名称改为「青蛙阅读」。
+- **按文件夹整理书库**。扫描文件夹时，可以把子文件夹分别建成书架，也可以把整个平铺文件夹导入同一个书架。
+- **按原文件名和来源文件夹排序**。书库支持按最近阅读、文件名和文件夹排序，文件名按数字自然排序，例如 `2 卷` 排在 `10 卷` 前。书架默认跟随书库，也可单独指定排序。
+- **中文字体预设**。在阅读设置中可下载并启用霞鹜文楷、霞鹜新致宋、霞鹜新晰黑、思源宋体、思源黑体、MiSans 和得意黑。字体下载需要联网，下载后的字体可离线使用。
+- **更准确的阅读进度**。继续阅读会尝试回到上次保存的页首字符位置。书库的已读百分比和本章剩余页数使用阅读器的分页结果。
+- **界面和触感调整**。书库列表、设置、导入和阅读记录等页面使用连体卡片。底部导航只显示选中项的文字，添加按钮使用同一强调色。菜单和弹窗移除了投影，移除书籍等操作的重复震动也已处理。
 
-<p align="center">
-  <img src="assets/banners/frogreader-light.webp" alt="FrogReader — Light & Beige Theme Showcase" width="100%" />
-</p>
+## 阅读与管理
 
-<p align="center">
-  <img src="assets/banners/frogreader-dark.webp" alt="FrogReader — Midnight & Dark Theme Showcase" width="100%" />
-</p>
+- **阅读器**支持分页和连续滚动，可切换浮动或经典控件，并为每本书调整字体、字号、行距和页边距。支持书内搜索、章节目录、脚注和跳转后返回。
+- **阅读计划与阅读记录**可以记录电子书、纸质书和在其他应用中读的书。阅读记录支持阅读日期、评分、书评和重读记录。
+- **摘录与书签**可以保存高亮、笔记和书签，并在「我的」页查找或跳回原文。每日目标刻度常驻显示。
+- **备份**支持仅备份数据或同时备份书籍，也可设置自动备份。
 
-### [Download FrogReader BETA 2](https://github.com/KNITIPKA/frog-reader/releases/tag/beta-2)
+## 支持的格式
 
-[Release notes](docs/releases/BETA_2.md) · [Changelog](CHANGELOG.md) · [Report a bug](https://github.com/KNITIPKA/frog-reader/issues)
+| 格式 | 支持范围 |
+| --- | --- |
+| EPUB 2/3 | 流式排版、目录、图片、嵌入字体及部分出版样式 |
+| FB2 / FB2 ZIP | 章节、注释、诗歌和嵌入图片 |
+| MOBI / KF8 / AZW3 / PalmDoc | 支持的 Kindle 文本及资源结构 |
+| TXT | UTF-8、带标记的 UTF-16 及部分旧式编码 |
+| Markdown | CommonMark、表格和按标题导航 |
 
-**Requires Android 8.0 or later.** Download the APK from the release assets and open it on your device.
+复杂出版样式可能与原版式有差异。当前不支持 PDF、KFX、带 DRM 的书籍和完整固定版式 EPUB/KF8。独立的「成就」和「统计」页尚未开放。
 
-> **Beta software:** Bugs and unfinished features remain. FrogReader is not on Google Play yet. Export a backup before upgrading or installing a development build.
+## 安装与升级
 
-## Why FrogReader?
+需要 **Android 8.0 或以上版本**。在本仓库的 [GitHub Releases](https://github.com/wzk0/frog-reader/releases) 下载 APK。应用包名为 `github.wzk0.frogreader`。
 
-- **Designed for Android.** A responsive Material 3 interface, smooth transitions, a first-launch setup and Light, Beige and Midnight themes, with optional Material You colors.
-- **Make reading your own.** Switch between pages and continuous scrolling, choose Floating or Classic controls, customize typography per book and import your own fonts.
-- **Respect the book.** The native rendering engine supports publisher styling, illustrations, tables, footnotes, poetry, embedded fonts and selected advanced EPUB layouts.
-- **Keep your library organized.** Browse covers or lists, create shelves, search books, edit metadata, rate titles and continue where you left off.
-- **Track more than e-books.** Manage a Reading Queue and a Reading Log for digital, physical and externally read books, including rereads, reviews and reading dates.
-- **Keep the passages that matter.** Save colored highlights, quotes, notes and bookmarks, then search and revisit them.
-- **Your books, your data.** Read offline with no account, export full or data-only backups and schedule automatic backups.
+- 同签名的青蛙阅读正式版可以直接覆盖升级。
+- 从调试包或上游 FrogReader 迁移时，请先在旧应用中进入 **设置 → 备份**，导出数据与书籍。安装正式版后，再从备份恢复。调试包与正式版同包名但签名不同，切换前需在确认备份可用后卸载调试包。
+- 下载 APK 和同一版本的 `SHA256SUMS.txt` 后，可用 `sha256sum -c SHA256SUMS.txt` 校验文件。
 
-## Reading experience
+首页卡片和列表的切换在调试包真机上仍可能卡顿，正式版表现待确认。 [0.0.2 更新说明](docs/releases/0.0.2.md)
 
-FrogReader offers **Slide, Stack, Page curl and None** page-turn options, chapter-aware progress, a page counter, volume-key navigation, adjustable brightness and optional screen wake lock. Search within a book, use an expandable table of contents, follow rich footnotes and return to your previous position after a jump.
+## 从源码构建
 
-Personalize fonts, size, line spacing, margins, alignment and hyphenation for individual books. **Literata** and **IBM Plex Sans** are bundled, with TTF/OTF import available. Right-to-left books and mixed-direction text have dedicated support, though device-specific validation is ongoing.
-
-## Your reading hub
-
-The **Profile** brings together recent activity, streaks and daily reading goals with three practical tools:
-
-- **Reading Queue:** Plan future reads, reorder priorities, add notes and optionally attach files before importing them into your library. [Details](docs/reading-queue.md).
-- **Reading Log:** Record books read in FrogReader, on paper or elsewhere. Track progress and status, dates, ratings, reviews, time and rereads without losing earlier history. [Details](docs/reading-log.md).
-- **Quotes & Bookmarks:** Find saved passages, manage notes and highlight colors, and jump back into the text.
-
-## Supported formats
-
-| Format                          | Support                                                                                          |
-| ------------------------------- | ------------------------------------------------------------------------------------------------ |
-| **EPUB 2/3**                    | Reflowable books, contents, publisher CSS, images, embedded fonts and supported advanced layouts |
-| **FB2 / FB2 ZIP**               | Sections, notes, poetry, formatting and embedded images                                          |
-| **MOBI / KF8 / AZW3 / PalmDoc** | Supported Kindle text and resource structures                                                    |
-| **TXT**                         | Plain text with UTF-8, marked UTF-16 and legacy Cyrillic decoding                                |
-| **Markdown**                    | CommonMark, GFM tables, strikethrough and heading-based navigation                               |
-
-The engine renders books natively rather than through a full browser CSS implementation. Complex publisher formatting can have limitations. **PDF, KFX, DRM-protected books and full fixed-layout EPUB/KF8 are not supported in Beta 1.** See the [EPUB rendering audit](docs/epub-standard-ebooks-audit.md) for technical details and limitations.
-
-## Roadmap
-
-Planned features and continuing improvements include:
-
-- **PDF reading** support.
-- **Text-to-Speech:** Android's TTS engines and an optional **on-device AI narration model**.
-- **Console-style achievements** for reading milestones, completed books and streaks.
-- **Detailed statistics** for reading time, habits, progress and personal records.
-- **Profile-wide search** across reading history, queue, quotes and bookmarks.
-- **True-black OLED theme** alongside the existing palettes.
-- **Ongoing UI/UX polish** and **reading engine improvements**, including rendering fidelity, performance and compatibility.
-
-These are plans, not promises for a particular release. Statistics, Achievements and profile-wide search are currently marked **Coming soon** in the app.
-
-## Build from source
-
-Use **JDK 21**, a compatible Android Studio version and Android SDK platform **37** (min SDK 26; target SDK 36).
+项目使用 Kotlin、Jetpack Compose 和 Material 3。构建需要 **JDK 21** 和 **Android SDK 37**。
 
 ```sh
-git clone https://github.com/KNITIPKA/frog-reader.git
+git clone https://github.com/wzk0/frog-reader.git
 cd frog-reader
-./gradlew test :app:assembleDebug
+./gradlew :app:testDebugUnitTest :app:assembleDebug
 ```
 
-For release builds, signing information, contribution guidelines and testing expectations, see [CONTRIBUTING.md](CONTRIBUTING.md). For the complete release history, see [CHANGELOG.md](CHANGELOG.md).
+调试 APK 位于 `app/build/outputs/apk/debug/`。构建、签名和贡献流程见 [贡献指南](CONTRIBUTING.md)，上游历史见 [更新日志](CHANGELOG.md)。
 
-## Feedback and contributions
+## 反馈与许可
 
-Found a crash, layout problem or a book that renders incorrectly? Use **Settings → About → Copy diagnostic info** and include those details when reporting the issue. If possible, include a reproducible sample that you have permission to share.
+如果遇到崩溃、排版或导入问题，可在 **设置 → 关于** 复制诊断信息，并附上应用版本、复现步骤以及有权分享的样本文件。 [提交问题](https://github.com/wzk0/frog-reader/issues)
 
-[GitHub Issues](https://github.com/KNITIPKA/frog-reader/issues) · [Telegram](https://t.me/knitipka) · [Signal](https://signal.me/#eu/gXfCfTAgdX8qNuAaZ-L3ozxFAJ0qb1ObkD9t2TNTVr6iPYYMhVVOSrXw-5pjdEjb) · [Email](mailto:knitipka@proton.me)
-
-Code contributions, parser improvements, translations, documentation and accessibility testing are welcome. See [Contributing](CONTRIBUTING.md).
-
-## License
-
-FrogReader's application code is licensed under **GNU GPL-3.0-only**. See [LICENSE](LICENSE). Third-party fonts, libraries and assets retain their respective licenses; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+原版由 KNITIPKA 开发，简体中文分支由 wzk0 维护。项目以 **GPL-3.0-only** 发布，第三方字体、图库和依赖遵循各自许可。 [许可证](LICENSE) · [第三方许可](THIRD_PARTY_NOTICES.md)
