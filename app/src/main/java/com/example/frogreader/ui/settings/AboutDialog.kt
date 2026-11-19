@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.settings
 
+import com.example.frogreader.ui.components.SpaceBeforeHeading
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import com.example.frogreader.ui.theme.floatingContentSurface
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -272,7 +274,7 @@ private fun AboutContent(
                 style = MaterialTheme.typography.bodyMedium,
                 color = colors.onSurfaceVariant,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(SpaceBeforeHeading))
             if (wide) {
                 Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                     Column(Modifier.weight(1f)) {
@@ -280,15 +282,15 @@ private fun AboutContent(
                     }
                     Column(Modifier.weight(1f)) {
                         AboutProject(onOpenLink)
-                        Spacer(Modifier.height(18.dp))
+                        Spacer(Modifier.height(SpaceBeforeHeading))
                         AboutUpdates(onOpenLink)
                     }
                 }
             } else {
                 AboutSupport(copied, onOpenLink, onCopyDiagnostics)
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(SpaceBeforeHeading))
                 AboutProject(onOpenLink)
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(SpaceBeforeHeading))
                 AboutUpdates(onOpenLink)
             }
             Spacer(Modifier.height(14.dp))
@@ -398,7 +400,7 @@ private fun AboutUpdates(onOpenLink: (String) -> Unit) {
 @Composable
 private fun AboutSectionTitle(title: String) {
     Text(
-        title, Modifier.padding(start = 2.dp, bottom = 10.dp),
+        title, Modifier.padding(start = 2.dp, bottom = SpaceAfterHeading),
         style = MaterialTheme.typography.titleMedium,
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurface,

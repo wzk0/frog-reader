@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.profile
 
+import com.example.frogreader.ui.components.rememberPredictiveBackMotion
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import com.example.frogreader.ui.components.connectedCardShape
 import com.example.frogreader.ui.components.ConnectedCardGap
 import com.example.frogreader.ui.components.FrogSnackbarHost
@@ -205,14 +207,11 @@ internal fun ReadingLogContent(
         }
     }
     DisposableEffect(drag) { onDispose { if (drag.id != null) { drag.stop(); currentActions.endDrag(true) } } }
-    BackHandler(busy || listBlocked || drag.id != null) {
-        when {
-            busy -> Unit
-            drag.id != null -> { drag.stop(); actions.endDrag(true) }
-            else -> close()
-        }
+    val backMotion = rememberPredictiveBackMotion(!busy && (listBlocked || drag.id != null)) {
+        if (drag.id != null) { drag.stop(); actions.endDrag(true) } else close()
     }
-    Box(Modifier.fillMaxSize()) {
+    BackHandler(busy) { }
+    Box(Modifier.fillMaxSize().then(backMotion)) {
         Scaffold(modifier = Modifier.graphicsLayer { alpha = 1f - presentation.progress }
             .then(if (listBlocked) Modifier.clearAndSetSemantics {} else Modifier), containerColor = colors.surface, topBar = {
             TopAppBar(title = { Text(stringResource(R.string.reading_log_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold) },
@@ -229,7 +228,7 @@ internal fun ReadingLogContent(
             Box(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding)) {
                 if (!ready) CircularProgressIndicator(Modifier.align(Alignment.Center))
                 else LazyColumn(state = list, userScrollEnabled = enabled,
-                    contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(ConnectedCardGap)) {
+                    contentPadding = PaddingValues(16.dp, SpaceAfterHeading, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(ConnectedCardGap)) {
                     item("log-summary") {
                         ReadingLogToolbar(entries, filter, sort, enabled,
                             onFilter = { filter = it; list.requestScrollToItem(0) }, onSort = { sortMenu = true },
@@ -258,8 +257,7 @@ internal fun ReadingLogContent(
                                 translationY = if (held) drag.translation(entry.id) else 0f
                                 scaleX = 1f + .012f * lift; scaleY = 1f + .012f * lift
                             }.animateContentSize()) {
-                            ReadingLogSwipeCard(entry, enabled, busy, actions.delete) { cardEnabled ->
-                            ReadingLogCard(entry, coverOf(entry), held, cardEnabled, entry.id in reorderableIds,
+                            ReadingLogCard(entry, coverOf(entry), held, enabled, entry.id in reorderableIds,
                                 upTarget != null, downTarget != null,
                                 { actions.open(entry.id) }, { actions.edit(entry) }, { deleting = entry },
                                 { upTarget?.let { actions.accessibleMove(entry.id, it) } ?: false },
@@ -270,7 +268,6 @@ internal fun ReadingLogContent(
                                 { list.layoutInfo.visibleItemsInfo.firstOrNull { it.key == entry.id }?.offset ?: 0 },
                                 progressPercent = readingLogProgressPercent(entry, activeProgress[entry.id]),
                                 shape = connectedCardShape(index, visibleEntries.size))
-                            }
                         }
                     }
                 }

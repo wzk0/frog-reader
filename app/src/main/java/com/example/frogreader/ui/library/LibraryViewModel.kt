@@ -224,6 +224,18 @@ class LibraryViewModel(
     /** A book from outside the app, waiting to be looked at before it is kept. */
     val offers = ImportOffer()
 
+    private val _bookToReveal = MutableStateFlow<String?>(null)
+    val bookToReveal = _bookToReveal.asStateFlow()
+
+    fun revealBook(bookId: String) {
+        setQuery("")
+        _bookToReveal.value = bookId
+    }
+
+    fun consumeBookToReveal(bookId: String) {
+        _bookToReveal.compareAndSet(bookId, null)
+    }
+
     private val _arrived = MutableStateFlow<String?>(null)
 
     /**

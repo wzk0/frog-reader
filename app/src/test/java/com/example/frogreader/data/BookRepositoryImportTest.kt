@@ -5,6 +5,8 @@ import com.example.frogreader.data.model.Book
 import com.example.frogreader.data.model.BookFormat
 import com.example.frogreader.data.model.Quote
 import com.example.frogreader.data.model.ReadingProgress
+import com.example.frogreader.ui.library.LibraryEntry
+import com.example.frogreader.ui.library.buildEntries
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -95,6 +97,27 @@ class BookRepositoryImportTest {
             assertTrue(original.contentEquals(repository.bookFileFor(reloaded)!!.readBytes()))
             assertEquals(book.contentHash, reloaded.contentHash)
         }
+    }
+
+    @Test
+    fun `source download becomes a readable top level entry even if the same file was shelved`() = runTest {
+        picked = File(testDir, "source.md").apply { writeText("# 测试书\n\n## 第一章\n\n正文") }
+        val repository = repository()
+        val firstImport = repository.importSourceBook(anyUri)
+        assertEquals("测试书", firstImport.title)
+        assertEquals(BookFormat.MD, firstImport.format)
+        assertTrue(repository.loadContent(firstImport).chapters.isNotEmpty())
+        val shelf = repository.createShelf(listOf(firstImport.id), "已有书架")
+        assertEquals(listOf(firstImport.id), shelf.bookIds)
+
+        val secondImport = repository.importSourceBook(anyUri)
+
+        assertEquals(firstImport.id, secondImport.id)
+        val reloaded = repository()
+        val topLevel = buildEntries(reloaded.books.value, reloaded.shelves.value)
+            .filterIsInstance<LibraryEntry.BookEntry>()
+        assertEquals(listOf(firstImport.id), topLevel.map { it.book.id })
+        assertTrue(reloaded.shelves.value.single().bookIds.isEmpty())
     }
 
     // ------------------------------------------------------------- staging

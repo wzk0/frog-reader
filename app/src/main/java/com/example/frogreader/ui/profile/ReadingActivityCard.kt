@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.profile
 
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import com.example.frogreader.ui.components.connectedCardShape
 import com.example.frogreader.ui.components.connectedCard
 import com.example.frogreader.ui.components.ConnectedCardGap
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
@@ -90,7 +92,7 @@ internal fun ReadingActivityCard(
             Modifier.fillMaxWidth()
                 .connectedCard(scheme, connectedCardShape(last = false))
                 .padding(horizontal = 18.dp, vertical = if (compact) 12.dp else 16.dp),
-            verticalArrangement = Arrangement.spacedBy(if (compact) 5.dp else 8.dp),
+            verticalArrangement = Arrangement.spacedBy(SpaceAfterHeading),
         ) {
             ActivityHeading(activity)
             TodayProgress(activity, draftGoal)
@@ -107,6 +109,7 @@ internal fun ReadingActivityCard(
                 Text(stringResource(R.string.stats_goal_minutes, draftGoal),
                     style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = scheme.primary)
             }
+            Spacer(Modifier.height(SpaceAfterHeading))
             GoalRuler(
                 minutes = draftGoal,
                 enabled = !saving,

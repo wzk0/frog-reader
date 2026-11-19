@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.tracker
 
+import com.example.frogreader.ui.components.SpaceAfterHeading
+import com.example.frogreader.ui.components.SpaceBeforeHeading
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -90,12 +92,12 @@ fun TrackerScreen(
                     tint = MaterialTheme.colorScheme.onTertiaryContainer,
                 )
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(SpaceBeforeHeading))
             Text(
                 text = stringResource(R.string.tracker_empty_title),
                 style = MaterialTheme.typography.titleLarge,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(SpaceAfterHeading))
             Text(
                 text = stringResource(R.string.tracker_empty_subtitle),
                 style = MaterialTheme.typography.bodyMedium,

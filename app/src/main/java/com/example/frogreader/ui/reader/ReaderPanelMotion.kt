@@ -20,12 +20,9 @@ internal class ReaderPanelMotion(private val scope: CoroutineScope) {
     var isDragging = false
         private set
     private var job: Job? = null
-    private var backStartHeight: Float? = null
-    private var backRestoreHeight = 0f
 
     fun animateTo(target: Float) {
         isDragging = false
-        backStartHeight = null
         job?.cancel()
         targetHeight = target.coerceAtLeast(0f)
         val destination = targetHeight
@@ -41,7 +38,6 @@ internal class ReaderPanelMotion(private val scope: CoroutineScope) {
     }
 
     private fun snapHeightTo(target: Float) {
-        backStartHeight = null
         job?.cancel()
         targetHeight = target.coerceAtLeast(0f)
         val destination = targetHeight
@@ -50,7 +46,6 @@ internal class ReaderPanelMotion(private val scope: CoroutineScope) {
 
     fun startDrag() {
         isDragging = true
-        backStartHeight = null
         job?.cancel()
         targetHeight = height.value
     }
@@ -68,28 +63,8 @@ internal class ReaderPanelMotion(private val scope: CoroutineScope) {
         isDragging = false
     }
 
-    /** Keep the drawer's open intent until the system gesture is committed. */
-    fun beginBack() {
-        isDragging = false
-        job?.cancel()
-        backStartHeight = height.value
-        backRestoreHeight = targetHeight
-    }
-
-    suspend fun seekBack(progress: Float) {
-        val start = backStartHeight ?: return
-        val fraction = if (progress.isFinite()) progress.coerceIn(0f, 1f) else 0f
-        height.snapTo(start * (1f - fraction))
-    }
-
-    fun finishBack(committed: Boolean) {
-        if (backStartHeight == null) return
-        val destination = if (committed) 0f else backRestoreHeight
-        animateTo(destination)
-    }
-
     /** A late measurement may resize an open peek, but must never reopen a closing panel. */
     fun updatePeek(previous: Float, next: Float) {
-        if (!isDragging && backStartHeight == null && isOpen && abs(targetHeight - previous) < 1f) animateTo(next)
+        if (!isDragging && isOpen && abs(targetHeight - previous) < 1f) animateTo(next)
     }
 }

@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.settings
 
+import com.example.frogreader.ui.components.SpaceBeforeHeading
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Spacer
@@ -34,7 +36,7 @@ internal fun ThemeSettingsPage(
                 text = stringResource(R.string.settings_theme_subtitle),
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(start = 4.dp, bottom = 16.dp),
+                modifier = Modifier.padding(start = 4.dp, bottom = SpaceAfterHeading),
             )
             ThemePreviewPicker(
                 settings = settings,
@@ -44,7 +46,7 @@ internal fun ThemeSettingsPage(
                 },
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(SpaceBeforeHeading))
             SettingsSectionLabel(stringResource(R.string.settings_theme_automatic))
             ThemeAutomaticControls(settings = settings, onUpdate = onUpdate)
 

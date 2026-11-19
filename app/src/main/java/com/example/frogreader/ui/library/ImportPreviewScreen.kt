@@ -1,7 +1,7 @@
 package com.example.frogreader.ui.library
 
+import com.example.frogreader.ui.components.rememberPredictiveBackMotion
 import androidx.compose.runtime.getValue
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -92,11 +92,12 @@ fun ImportPreviewScreen(
         label = "coverGlow",
     )
 
-    BackHandler(onBack = onCancel)
+    val backMotion = rememberPredictiveBackMotion(onBack = onCancel)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .then(backMotion)
             .background(scheme.surface)
             // The book's colour washing down the top of the page, not just a
             // halo around the artwork. This is the part that makes the screen

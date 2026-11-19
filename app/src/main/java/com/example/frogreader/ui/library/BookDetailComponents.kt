@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.library
 
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -99,12 +100,13 @@ internal fun BookDetailSection(
     Surface(modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
         color = MaterialTheme.colorScheme.surfaceContainerLowest, contentColor = MaterialTheme.colorScheme.onSurface,
         tonalElevation = 0.dp) {
-        Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically,
+        Column(Modifier.padding(20.dp)) {
+            Row(Modifier.fillMaxWidth().then(if (action == null) Modifier else Modifier.heightIn(min = 40.dp)), verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(title, Modifier.weight(1f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 action?.invoke()
             }
+            Spacer(Modifier.height(SpaceAfterHeading))
             content()
         }
     }

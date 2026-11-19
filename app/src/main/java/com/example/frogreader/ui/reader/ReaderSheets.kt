@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.reader
 
+import com.example.frogreader.ui.components.SpaceBeforeHeading
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.runtime.setValue
@@ -770,7 +772,7 @@ fun ReaderSettingsControls(
             }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(SpaceBeforeHeading))
 
         // Brightness: manual override, or "Auto" = the system level (which
         // keeps the phone's adaptive brightness in charge). While on Auto the
@@ -861,7 +863,7 @@ fun ReaderSettingsControls(
                 )
             }
         }
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(SpaceBeforeHeading))
 
         // Line spacing and font size: compact steppers, side by side.
         ReaderControlPair(
@@ -950,7 +952,7 @@ fun ReaderSettingsControls(
             },
         )
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(SpaceBeforeHeading))
 
         // Side margins and reading mode, side by side. The bottom of this
         // row is the "peek" height the half-open panel snaps to.
@@ -1022,7 +1024,7 @@ fun ReaderSettingsControls(
         // Page-turn animation only applies to paged mode.
         if (settings.readingMode == ReadingMode.PAGES) {
             Column {
-                Spacer(Modifier.height(18.dp))
+                Spacer(Modifier.height(SpaceBeforeHeading))
                 PanelSectionLabel(stringResource(R.string.reader_section_page_anim), panelColors)
                 ReaderPageTurnPicker(
                     selected = settings.pageTurnAnimation,
@@ -1032,7 +1034,7 @@ fun ReaderSettingsControls(
             }
         }
 
-        Spacer(Modifier.height(18.dp))
+        Spacer(Modifier.height(SpaceBeforeHeading))
 
         // Font family: bundled faces rendered in themselves, plus the
         // user's own font library behind the Custom chip.
@@ -1261,7 +1263,7 @@ fun ReaderSettingsControls(
             )
         }
 
-        Spacer(Modifier.height(22.dp))
+        Spacer(Modifier.height(SpaceBeforeHeading))
 
         // The book's own design — one switch that moves the controls below.
         PanelSectionLabel(
@@ -1280,7 +1282,7 @@ fun ReaderSettingsControls(
             )
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(SpaceBeforeHeading))
 
         // Text & layout
         PanelSectionLabel(
@@ -1339,7 +1341,7 @@ fun ReaderSettingsControls(
             )
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(SpaceBeforeHeading))
 
         // Pages & navigation
         val isPagedMode = settings.readingMode == ReadingMode.PAGES
@@ -1372,7 +1374,7 @@ fun ReaderSettingsControls(
         Spacer(Modifier.height(12.dp))
         ReaderPageCounterSettings(settings, panelColors, pageCounterInfo, onUpdate)
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(SpaceBeforeHeading))
 
         // Device
         PanelSectionLabel(
@@ -1407,7 +1409,7 @@ fun ReaderSettingsControls(
             )
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(SpaceBeforeHeading))
 
         PanelSectionLabel(stringResource(R.string.settings_reader_chrome_title), panelColors)
         ChipRow(
@@ -1585,9 +1587,8 @@ private fun ChipRow(
         indicatorColor = colors.selectedControl,
         contentColor = colors.onChrome,
         selectedContentColor = colors.onSelectedControl,
-        indicatorBorder = colors.selectedControlBorder,
-        containerRadius = 26.dp,
-        indicatorRadius = 22.dp,
+        containerRadius = 30.dp,
+        indicatorRadius = 26.dp,
         minItemHeight = 0.dp,
         onSelect = { index ->
             haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)
@@ -1692,7 +1693,7 @@ private fun PanelSectionLabel(
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(bottom = 10.dp),
+        modifier = Modifier.padding(bottom = SpaceAfterHeading),
     ) {
         if (icon != null) {
             Icon(

@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.stats
 
+import com.example.frogreader.ui.components.SpaceBeforeHeading
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -102,7 +104,7 @@ fun StatsScreen(
                 .padding(horizontal = 20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(SpaceAfterHeading))
 
             // Today's goal ring
             Box(contentAlignment = Alignment.Center) {
@@ -124,7 +126,7 @@ fun StatsScreen(
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(SpaceBeforeHeading))
 
             // Streak
             Surface(
@@ -162,7 +164,7 @@ fun StatsScreen(
                 }
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(SpaceBeforeHeading))
 
             // Daily goal editor
             Row(
@@ -194,7 +196,7 @@ fun StatsScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(SpaceBeforeHeading))
 
             // Last 14 days
             Text(
@@ -202,7 +204,7 @@ fun StatsScreen(
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(bottom = 12.dp),
+                    .padding(bottom = SpaceAfterHeading),
             )
             DaysChart(
                 days = (13 downTo 0).map { today.minusDays(it.toLong()) },
@@ -210,7 +212,7 @@ fun StatsScreen(
                 goalMinutes = settings.dailyGoalMinutes,
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(SpaceBeforeHeading))
 
             // Totals
             Row(

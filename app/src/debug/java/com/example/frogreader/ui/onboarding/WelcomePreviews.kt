@@ -30,6 +30,8 @@ internal fun WelcomeBeige() = InteractiveWelcome(AppSettings(theme = AppTheme.SE
 @Composable
 internal fun WelcomeMidnight() = InteractiveWelcome(AppSettings(theme = AppTheme.OLED, followSystemTheme = false))
 
+@Preview(name = "Welcome · connected settings · compact", widthDp = 320, heightDp = 640, fontScale = 1.25f,
+    uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Preview(name = "Welcome · follows light system", widthDp = 393, heightDp = 1600,
     uiMode = Configuration.UI_MODE_NIGHT_NO)
 @Composable

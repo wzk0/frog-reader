@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.settings
 
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import com.example.frogreader.ui.components.cardSurface
 import com.example.frogreader.ui.components.connectedCardShape
 import com.example.frogreader.ui.components.connectedCard
@@ -39,6 +40,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -63,11 +67,13 @@ internal val SettingsRowShape = RoundedCornerShape(22.dp)
 internal fun SettingsPageScaffold(
     title: String,
     onBack: () -> Unit,
+    scrollContent: Boolean = true,
+    modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     Scaffold(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.background,
@@ -99,11 +105,11 @@ internal fun SettingsPageScaffold(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .then(if (scrollContent) Modifier.verticalScroll(rememberScrollState()) else Modifier)
+                .padding(start = 16.dp, end = 16.dp, top = SpaceAfterHeading),
             content = {
                 content()
-                Spacer(Modifier.height(40.dp))
+                if (scrollContent) Spacer(Modifier.height(40.dp))
             },
         )
     }
@@ -304,7 +310,7 @@ internal fun <T> SettingsSegmentedControl(
 }
 
 @Composable
-internal fun SettingsSectionLabel(text: String) {
+internal fun SettingsSectionLabel(text: String, bottomSpacing: Dp = SpaceAfterHeading) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelLarge.copy(
@@ -312,7 +318,7 @@ internal fun SettingsSectionLabel(text: String) {
             letterSpacing = 0.1.sp,
         ),
         color = MaterialTheme.colorScheme.primary,
-        modifier = Modifier.padding(start = 8.dp, bottom = 10.dp),
+        modifier = Modifier.padding(start = 8.dp, bottom = bottomSpacing).semantics { heading() },
     )
 }
 

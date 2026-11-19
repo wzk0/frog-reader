@@ -1,8 +1,8 @@
 package com.example.frogreader.ui.library
 
+import com.example.frogreader.ui.components.rememberPredictiveBackMotion
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
@@ -203,8 +203,9 @@ internal fun ShelfPanel(
     }
 
     // Back peels the panel's own layers before the screen gets a turn.
-    BackHandler(enabled = expanded && searchQuery != null) { searchQuery = null }
-    BackHandler(enabled = expanded && searchQuery == null && renaming) { renaming = false }
+    val backMotion = rememberPredictiveBackMotion(expanded && (searchQuery != null || renaming)) {
+        if (searchQuery != null) searchQuery = null else renaming = false
+    }
 
     val shown = remember(entry.books, searchQuery) {
         searchBooks(entry.books, searchQuery.orEmpty())
@@ -256,6 +257,7 @@ internal fun ShelfPanel(
                 modifier = Modifier
                     .align(Alignment.Center)
                     .padding(horizontal = 16.dp, vertical = 24.dp)
+                    .then(backMotion)
                     // BEFORE the graphicsLayer, and it has to stay there: modifier
                     // nodes to the left of a layer sit outside it, so positionInRoot
                     // keeps reporting the card's untransformed rect instead of its

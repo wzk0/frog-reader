@@ -2,6 +2,7 @@ package com.example.frogreader.ui.reader
 
 import com.example.frogreader.ui.components.ConnectedCardGap
 import com.example.frogreader.ui.components.connectedCardShape
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.Canvas
@@ -156,7 +157,7 @@ internal fun ReaderPageCounterSettings(
                     stringResource(R.string.reader_counter_style),
                     style = MaterialTheme.typography.labelLarge,
                     color = colors.onChromeVariant,
-                    modifier = Modifier.padding(start = 4.dp, top = 2.dp, bottom = 10.dp),
+                    modifier = Modifier.padding(start = 4.dp, top = 2.dp, bottom = SpaceAfterHeading),
                 )
                 PageCounterStyleCards(settings, colors, pageCounterInfo) { index ->
                     haptics.performHapticFeedback(HapticFeedbackType.SegmentTick)

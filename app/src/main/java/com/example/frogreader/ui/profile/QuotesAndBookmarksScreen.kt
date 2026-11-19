@@ -1,13 +1,20 @@
 package com.example.frogreader.ui.profile
 
+import com.example.frogreader.ui.components.rememberPredictiveBackMotion
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import com.example.frogreader.ui.components.cardSurface
 import com.example.frogreader.ui.components.connectedCardShape
 import com.example.frogreader.ui.components.ConnectedCardGap
 import com.example.frogreader.ui.components.FrogSnackbarHost
 import com.example.frogreader.ui.components.FrogSegmentedControl
 import android.content.Intent
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
+import android.net.Uri
+import androidx.navigation.NavType
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.example.frogreader.ui.components.AppSubpageNavHost
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
@@ -100,6 +107,9 @@ fun QuotesAndBookmarksScreen(
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
+private const val SavedBooksRoute = "saved-books"
+private const val SavedBookArgument = "savedBookId"
+
 @Composable
 internal fun QuotesAndBookmarksContent(
     books: List<Book>,
@@ -119,7 +129,16 @@ internal fun QuotesAndBookmarksContent(
     onDeleteQuote: (Book, Quote) -> Unit = { _, _ -> },
     onDeleteBookmark: (Book, Bookmark) -> Unit = { _, _ -> },
 ) {
-    var selectedBookId by rememberSaveable { mutableStateOf(initialBookId) }
+    val navController = rememberNavController()
+    val savedBookEntry by navController.currentBackStackEntryAsState()
+    val selectedBookId = savedBookEntry?.arguments?.getString(SavedBookArgument)
+    var initialBookOpened by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(initialBookId) {
+        if (initialBookId != null && !initialBookOpened) {
+            navController.navigate("$SavedBooksRoute/${Uri.encode(initialBookId)}")
+            initialBookOpened = true
+        }
+    }
     var libraryQuery by rememberSaveable { mutableStateOf("") }
     var librarySearchVisible by rememberSaveable { mutableStateOf(false) }
     var bookQuery by rememberSaveable(selectedBookId) { mutableStateOf("") }
@@ -151,14 +170,18 @@ internal fun QuotesAndBookmarksContent(
     }
     val goBack: () -> Unit = {
         leaveEditor {
-            if (selectedBookId != null) selectedBookId = null
+            if (selectedBookId != null) navController.popBackStack()
             else if (searchVisible) toggleSearch()
             else onBack()
         }
     }
-    BackHandler { goBack() }
+    val backMotion = rememberPredictiveBackMotion(
+        editor != null || (selectedBookId == null && searchVisible),
+        onBack = goBack,
+    )
 
     Scaffold(
+        modifier = backMotion,
         containerColor = colors.surface,
         snackbarHost = { FrogSnackbarHost(snackbar) },
         topBar = {
@@ -203,14 +226,12 @@ internal fun QuotesAndBookmarksContent(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
                 )
             }
-            AnimatedContent(
-                targetState = selectedBook, contentKey = { it?.id }, label = "saved book",
-                modifier = Modifier.fillMaxWidth().weight(1f),
-            ) { book ->
+            val pageContent = rememberUpdatedState<@Composable (String?) -> Unit> { bookId ->
+                val book = books.firstOrNull { it.id == bookId }
                 if (book == null) {
                     LazyColumn(
                         state = bookListState, modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 24.dp),
+                        contentPadding = PaddingValues(16.dp, SpaceAfterHeading, 16.dp, 24.dp),
                         verticalArrangement = Arrangement.spacedBy(ConnectedCardGap),
                     ) {
                         if (collection.isNotEmpty()) item("heading") {
@@ -220,7 +241,7 @@ internal fun QuotesAndBookmarksContent(
                             EmptyQuotesAndBookmarks(libraryQuery, R.string.quotes_bookmarks_empty_collection, R.string.quotes_bookmarks_empty_collection_hint)
                         }
                         itemsIndexed(collection, key = { _, item -> item.id }) { index, savedBook ->
-                            SavedBookCard(savedBook, coverOf, Modifier.animateItem(), connectedCardShape(index, collection.size)) { selectedBookId = savedBook.id }
+                            SavedBookCard(savedBook, coverOf, Modifier.animateItem(), connectedCardShape(index, collection.size)) { navController.navigate("$SavedBooksRoute/${Uri.encode(savedBook.id)}") { launchSingleTop = true } }
                         }
                     }
                 } else key(book.id) {
@@ -342,6 +363,17 @@ internal fun QuotesAndBookmarksContent(
                     }
                 }
             }
+            AppSubpageNavHost(
+                navController,
+                SavedBooksRoute,
+                Modifier.fillMaxWidth().weight(1f),
+            ) {
+                composable(SavedBooksRoute) { pageContent.value(null) }
+                composable(
+                    "$SavedBooksRoute/{$SavedBookArgument}",
+                    arguments = listOf(navArgument(SavedBookArgument) { type = NavType.StringType }),
+                ) { entry -> pageContent.value(entry.arguments?.getString(SavedBookArgument)) }
+            }
 
         }
     }
@@ -395,7 +427,7 @@ private fun QuotesAndBookmarksTabs(selected: Int, quoteCount: Int, bookmarkCount
 @Composable
 private fun CollectionLabel(text: String) {
     Text(text, style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 2.dp, bottom = 2.dp))
+        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 2.dp, bottom = SpaceAfterHeading - ConnectedCardGap))
 }
 
 @Composable

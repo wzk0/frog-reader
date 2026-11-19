@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.settings
 
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -74,7 +75,7 @@ internal fun AboutLicensesDialog(initialPage: AboutLicensePage, onDismiss: () ->
                         Icon(Icons.Rounded.Close, stringResource(R.string.settings_close))
                     }
                 }
-                Row(Modifier.fillMaxWidth()) {
+                Row(Modifier.fillMaxWidth().padding(top = SpaceAfterHeading)) {
                     TextButton(onClick = { page = AboutLicensePage.APP }, Modifier.weight(1f)) {
                         Text(stringResource(R.string.settings_about_license_app))
                     }

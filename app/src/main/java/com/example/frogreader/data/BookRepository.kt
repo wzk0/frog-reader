@@ -778,7 +778,7 @@ open class BookRepository(private val context: Context? = null) {
                 temp.outputStream().use { input.copyTo(it) }
             }
 
-            val originalName = displayNameFor(uri)
+            val originalName = displayNameFor(uri) ?: uri.takeIf { it.scheme == "file" }?.lastPathSegment
             val mimeType = runCatching { context?.contentResolver?.getType(uri) }.getOrNull()
             val (format, stored) = BookParsers.detectAndStore(temp, stagingDir, stagingId, originalName, mimeType)
             try {
@@ -843,6 +843,26 @@ open class BookRepository(private val context: Context? = null) {
     /**
      * Puts a staged file into the library, as a new book or over an existing one.
      */
+    /** Adds a downloaded book as a top-level library entry, including an exact duplicate already on a shelf. */
+    internal suspend fun importSourceBook(uri: Uri): Book {
+        val staged = stageImport(uri)
+        try {
+            val existing = staged.duplicateOf?.takeIf { it.match == DuplicateMatch.SAME_FILE }?.book
+            if (existing == null) return commitImport(staged, ImportMode.New)
+
+            val book = if (bookFileFor(existing)?.isFile == true) existing
+            else commitImport(staged, ImportMode.Replace(existing.id))
+            updateShelves { shelves ->
+                shelves.map { shelf ->
+                    if (book.id in shelf.bookIds) shelf.copy(bookIds = shelf.bookIds - book.id) else shelf
+                }
+            }
+            return book
+        } finally {
+            withContext(kotlinx.coroutines.NonCancellable) { discardImport(staged) }
+        }
+    }
+
     open suspend fun commitImport(staged: StagedImport, mode: ImportMode): Book =
         withContext(Dispatchers.IO) {
             when (mode) {

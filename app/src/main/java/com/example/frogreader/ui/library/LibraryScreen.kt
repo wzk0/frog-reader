@@ -1,11 +1,13 @@
 package com.example.frogreader.ui.library
 
+import com.example.frogreader.ui.components.rememberPredictiveBackMotion
+import com.example.frogreader.ui.components.SpaceBeforeHeading
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import com.example.frogreader.ui.components.cardSurface
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import com.example.frogreader.ui.components.FrogSnackbarHost
 import com.example.frogreader.ui.theme.floatingSurface
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -59,6 +61,7 @@ import com.example.frogreader.ui.components.FlatDropdownMenu as DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
@@ -234,6 +237,7 @@ fun LibraryScreen(
     onDockVisible: (Boolean) -> Unit = {},
     onTabSwipeEnabled: (Boolean) -> Unit = {},
     dockScrollEnabled: Boolean = true,
+    onSearchBookSources: ((String) -> Unit)? = null,
 ) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     val books by viewModel.books.collectAsStateWithLifecycle()
@@ -269,15 +273,15 @@ fun LibraryScreen(
     val searching = query.isNotBlank()
 
     // Back peels one layer at a time: the selection first, then the folder.
-    BackHandler(enabled = selection.active) { selection.clear() }
-    BackHandler(enabled = !selection.active && openShelfId != null) { openShelfId = null }
+    val backMotion = rememberPredictiveBackMotion(selection.active || openShelfId != null) {
+        if (selection.active) selection.clear() else openShelfId = null
+    }
 
-    // The hero is still "the last book you opened". It keeps that spot even
-    // when it lives inside a shelf — only a LOOSE copy is hidden from the grid.
+    // The hero keeps the last opened book handy independently of the library list.
     val heroBook = remember(books) {
         books.firstOrNull { it.lastOpenedAtMillis != null } ?: books.firstOrNull()
     }
-    val visibleEntries = remember(entries, books, query, heroBook, sortMode) {
+    val visibleEntries = remember(entries, books, query, sortMode) {
         val filtered = filterEntries(entries, books, query)
         // A query has its own order — best match first — and re-sorting it by
         // file name would only bury the answer the user was looking for.
@@ -285,7 +289,6 @@ fun LibraryScreen(
             filtered
         } else {
             arrangeEntries(filtered, sortMode)
-                .filterNot { it is LibraryEntry.BookEntry && it.book.id == heroBook?.id }
         }
     }
 
@@ -343,6 +346,21 @@ fun LibraryScreen(
     val reportTabSwipe by rememberUpdatedState(onTabSwipeEnabled)
     val observeDockScroll by rememberUpdatedState(dockScrollEnabled && dockAvailable)
     val gridState = rememberLazyGridState()
+    val bookToReveal by viewModel.bookToReveal.collectAsStateWithLifecycle()
+    LaunchedEffect(bookToReveal, slots, searching) {
+        val id = bookToReveal ?: return@LaunchedEffect
+        if (searching) return@LaunchedEffect
+        val slotIndex = slots.indexOfFirst { (it as? LibrarySlot.Entry)?.entry?.id == "b:$id" }
+        if (slotIndex >= 0) {
+            // The header and view controls precede the books in both display modes.
+            gridState.scrollToItem(slotIndex + 2)
+        } else if (heroBook?.id == id) {
+            gridState.scrollToItem(0)
+        } else {
+            return@LaunchedEffect
+        }
+        viewModel.consumeBookToReveal(id)
+    }
     val dockScroll = remember(density) {
         LibraryDockScrollState(
             hideThreshold = with(density) { 20.dp.toPx() },
@@ -598,6 +616,7 @@ fun LibraryScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
+                .then(backMotion)
                 .background(librarySurface)
                 .onGloballyPositioned { tileBounds.rootOrigin = it.positionInRoot() },
         ) {
@@ -634,7 +653,7 @@ fun LibraryScreen(
                             heroBook?.let { pendingRemoval = PendingRemoval(listOf(it.id)) }
                         },
                         // The header is full-bleed; undo the grid's side padding.
-                        modifier = Modifier.padding(bottom = GridRowGap).bleedHorizontally(SidePadding),
+                        modifier = Modifier.bleedHorizontally(SidePadding),
                     )
                 }
 
@@ -666,18 +685,21 @@ fun LibraryScreen(
                             selection = selection.takeIf { it.scope == SelectionScope.Grid },
                             onSelectAll = { selection.selectAll(visibleEntries.map { it.id }) },
                             onClearSelection = { selection.clear() },
-                            modifier = Modifier.padding(top = 6.dp, bottom = 6.dp + GridRowGap),
+                            modifier = Modifier.padding(top = SpaceBeforeHeading, bottom = SpaceAfterHeading),
                         )
                     }
                 }
 
-                if (entries.isEmpty()) {
+                if (visibleEntries.isEmpty() && searching) {
+                    item(span = { GridItemSpan(maxLineSpan) }, key = "library_no_results") {
+                        NoSearchResults(
+                            modifier = Modifier.padding(top = 48.dp),
+                            onSearchSources = onSearchBookSources?.let { action -> { action(query.trim()) } },
+                        )
+                    }
+                } else if (entries.isEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }, key = "library_empty") {
                         EmptyLibrary(Modifier.padding(top = 64.dp))
-                    }
-                } else if (visibleEntries.isEmpty() && searching) {
-                    item(span = { GridItemSpan(maxLineSpan) }, key = "library_no_results") {
-                        NoSearchResults(Modifier.padding(top = 48.dp))
                     }
                 } else {
                     itemsIndexed(
@@ -719,7 +741,10 @@ fun LibraryScreen(
                                     fadeInSpec = if (swapping) null else ItemFadeSpec,
                                     fadeOutSpec = if (swapping) null else ItemFadeSpec,
                                     placementSpec = if (swapping || !orderingSettled) null else ItemPlacementSpec,
-                                ).padding(bottom = rowGap),
+                                ).padding(
+                                    top = if (index == 0) 0.dp else SpaceBeforeHeading - rowGap,
+                                    bottom = SpaceAfterHeading,
+                                ),
                             )
                             return@itemsIndexed
                         }
@@ -1451,9 +1476,6 @@ private fun SectionRow(
     val scheme = MaterialTheme.colorScheme
     val selecting = selection != null
 
-    // No top padding here: the caller adds exactly what the grid's own item
-    // spacing does not already cover, so header → section stays at 16dp.
-    //
     // Fixed height, because this row swaps the view-mode toggle for two chips
     // when a selection starts and they do not measure the same. Left to itself
     // the row changed height, and the whole grid below it stepped a few pixels
@@ -1624,8 +1646,7 @@ private fun FolderHeading(
 
     Row(
         modifier = modifier
-            .fillMaxWidth()
-            .padding(top = 10.dp, bottom = 2.dp),
+            .fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -1666,7 +1687,7 @@ private fun SelectionChip(label: String, onClick: () -> Unit) {
         letterSpacing = 0.9.sp,
         color = MaterialTheme.colorScheme.onSurface,
         modifier = Modifier
-            .clip(RoundedCornerShape(13.dp))
+            .clip(CircleShape)
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 7.dp),
@@ -2341,7 +2362,7 @@ private fun EmptyLibrary(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun NoSearchResults(modifier: Modifier = Modifier) {
+private fun NoSearchResults(modifier: Modifier = Modifier, onSearchSources: (() -> Unit)? = null) {
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -2359,6 +2380,12 @@ private fun NoSearchResults(modifier: Modifier = Modifier) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
+        if (onSearchSources != null) {
+            Spacer(Modifier.height(14.dp))
+            OutlinedButton(onClick = onSearchSources) {
+                Text(stringResource(R.string.book_sources_search_from_library))
+            }
+        }
     }
 }
 

@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.profile
 
+import com.example.frogreader.ui.components.rememberPredictiveBackMotion
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import com.example.frogreader.ui.components.cardSurface
 import com.example.frogreader.ui.components.connectedCardShape
 import com.example.frogreader.ui.components.ConnectedCardGap
@@ -236,14 +238,12 @@ internal fun ReadingQueueContent(
     DisposableEffect(drag) {
         onDispose { if (drag.id != null) { drag.stop(); currentActions.endDrag(true) } }
     }
-    BackHandler(busy || editor != null || drag.id != null) {
-        when {
-            busy -> Unit
-            drag.id != null -> { drag.stop(); actions.endDrag(true) }
-            else -> closeEditor()
-        }
+    val backMotion = rememberPredictiveBackMotion(!busy && (editor != null || drag.id != null)) {
+        if (drag.id != null) { drag.stop(); actions.endDrag(true) } else closeEditor()
     }
+    BackHandler(busy) { }
     Scaffold(
+        modifier = backMotion,
         containerColor = colors.surface,
         topBar = {
             TopAppBar(
@@ -279,11 +279,11 @@ internal fun ReadingQueueContent(
             if (!ready) CircularProgressIndicator(Modifier.align(Alignment.Center))
             else LazyColumn(
                 state = list, modifier = Modifier.fillMaxSize(), userScrollEnabled = drag.id == null,
-                contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
+                contentPadding = PaddingValues(16.dp, SpaceAfterHeading, 16.dp, 96.dp),
                 verticalArrangement = Arrangement.spacedBy(ConnectedCardGap),
             ) {
                 item("queue-label") {
-                    FlowRow(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp),
+                    FlowRow(Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, bottom = SpaceAfterHeading - ConnectedCardGap),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(stringResource(R.string.reading_queue_up_next), Modifier.padding(end = 8.dp),

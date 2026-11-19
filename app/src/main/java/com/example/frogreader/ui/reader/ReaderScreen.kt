@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.reader
 
+import com.example.frogreader.ui.components.rememberPredictiveBackMotion
 import androidx.compose.runtime.setValue
 import com.example.frogreader.ui.components.FrogSnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -70,8 +71,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.activity.compose.BackHandler
-import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Close
@@ -638,7 +637,7 @@ private fun ReaderContent(
             noteToShow = null
         }
     }
-    BackHandler(enabled = completionVisible || seekCompletion) {
+    val completionBackMotion = rememberPredictiveBackMotion(completionVisible || seekCompletion) {
         if (reviewKeyboardVisible) {
             reviewFocus.clearFocus()
             reviewKeyboard?.hide()
@@ -844,11 +843,13 @@ private fun ReaderContent(
         }
     }
 
-    BackHandler(enabled = selection.active) { selection.clear() }
+
     // History belongs to the explicit return control. Android Back in the
     // main text must reach the app navigator, even after many in-book jumps.
-    BackHandler(enabled = !selection.active && linkedDocumentId != null) {
-        if (navigationBackAvailable) {
+    val inBookBackMotion = rememberPredictiveBackMotion(selection.active || linkedDocumentId != null) {
+        if (selection.active) {
+            selection.clear()
+        } else if (navigationBackAvailable) {
             navigateBackInBook()
         } else {
             linkedDocumentId = null
@@ -922,6 +923,8 @@ private fun ReaderContent(
             // Keeping paper outside the scale avoids a detached rectangular sheet.
             .background(colors.background)
             .then(contentMotion)
+            .then(completionBackMotion)
+            .then(inBookBackMotion)
             .readerOpeningReveal(opening)
             .onSizeChanged { diagnosticViewport = it }
             .then(if (opening.finished) Modifier else Modifier.clearAndSetSemantics { }),
@@ -1249,7 +1252,7 @@ private fun ReaderContent(
             returnIcon = if (lastPageVisible) Icons.Rounded.Star else Icons.AutoMirrored.Rounded.Undo,
             onReturn = { if (lastPageVisible) openReview() else navigateBackInBook() },
             // The pull-up panel is physically above the selection toolbar.
-            // Its later-composed BackHandler must therefore close the panel
+            // Its later-composed predictive handler must therefore close the panel
             // first; a second Back can clear the still-valid selection.
             allowBackDismiss = !searchVisible && linkedDocumentId == null,
             colors = colors,
@@ -1582,7 +1585,7 @@ private fun NoteSheet(
         // This handler is inside the dialog and replaces its dismiss handler
         // only for a note opened from another note. Back then mirrors the
         // contextual return chip and leaves the underlying note visible.
-        BackHandler(enabled = systemBackReturnsToPreviousNote, onBack = onReturn)
+        val backMotion = rememberPredictiveBackMotion(systemBackReturnsToPreviousNote, onBack = onReturn)
         // Keep the already-visible modal surface while giving every note its
         // own list state. Re-keying the whole sheet would make nested notes
         // disappear and slide in again instead of replacing their content.
@@ -1616,7 +1619,7 @@ private fun NoteSheet(
                     ReaderMetrics.horizontalPadding(settings) * 2
                 LazyColumn(
                     state = listState,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().then(backMotion),
                     contentPadding = PaddingValues(bottom = 84.dp),
                 ) {
                     item(key = "note-title") {
@@ -4133,15 +4136,8 @@ private fun ReaderBottomBar(
     // This panel is visually above the book, so Android Back must dismiss it
     // before leaving the reader. Its handler follows the reader-level
     // handler, which gives the topmost surface the expected priority.
-    PredictiveBackHandler(enabled = allowBackDismiss && visible && panelOpen) { progress ->
-        panelMotion.beginBack()
-        try {
-            progress.collect { event -> panelMotion.seekBack(event.progress) }
-            panelMotion.finishBack(committed = true)
-        } catch (cancelled: CancellationException) {
-            panelMotion.finishBack(committed = false)
-            throw cancelled
-        }
+    val panelBackMotion = rememberPredictiveBackMotion(allowBackDismiss && visible && panelOpen) {
+        settlePanel(0f)
     }
 
     fun settleWithVelocity(velocity: Float) {
@@ -4289,8 +4285,7 @@ private fun ReaderBottomBar(
                         onSeekBook = onSeekBook,
                         panelContent = {
                             val expanded = panelOpen && panelMotion.targetHeight >= fullPx - 1f
-                            // Follow the actual drawer height, including reversed drags and
-                            // predictive Back, instead of removing 24 dp in the final frame.
+                            // Follow the drawer height while dragging or settling.
                             val handleFraction = if (appSettings.showCollapsedReaderHandle) 1f else {
                                 (panelHeight.value / with(density) { 48.dp.toPx() }).coerceIn(0f, 1f)
                             }
@@ -4331,6 +4326,7 @@ private fun ReaderBottomBar(
                                 Column(
                                     Modifier
                                         .height(panelDp)
+                                        .then(panelBackMotion)
                                         .background(colors.chrome)
                                         .then(
                                             if (appSettings.expandReaderPanelsOnSwipe) {

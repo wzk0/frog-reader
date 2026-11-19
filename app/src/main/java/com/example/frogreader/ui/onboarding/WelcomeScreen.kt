@@ -1,10 +1,12 @@
 package com.example.frogreader.ui.onboarding
 
-import androidx.compose.foundation.background
+import com.example.frogreader.ui.components.SpaceBeforeHeading
+import com.example.frogreader.ui.components.SpaceAfterHeading
+import com.example.frogreader.ui.settings.SettingsRows
+import com.example.frogreader.ui.settings.SettingsCardRow
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -15,7 +17,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -35,12 +36,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
@@ -56,7 +54,6 @@ import com.example.frogreader.data.effectiveTheme
 import com.example.frogreader.ui.reader.readerColors
 import com.example.frogreader.ui.settings.ReaderChromeStylePicker
 import com.example.frogreader.ui.settings.SettingsControlHeader
-import com.example.frogreader.ui.settings.SettingsCard
 import com.example.frogreader.ui.settings.SettingsSectionLabel
 import com.example.frogreader.ui.settings.ThemeAutomaticControls
 import com.example.frogreader.ui.settings.ThemePreviewPicker
@@ -84,52 +81,56 @@ fun WelcomeScreen(
                 Modifier.widthIn(max = 560.dp).fillMaxWidth()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 16.dp, vertical = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(SpaceBeforeHeading),
             ) {
-                WelcomeHeader()
-                WelcomeCard {
-                    SettingsControlHeader(
-                        Icons.Rounded.ViewAgenda,
-                        stringResource(R.string.welcome_controls_title),
-                        stringResource(R.string.welcome_controls_subtitle),
-                    )
-                    ReaderChromeStylePicker(
-                        selected = settings.readerChromeStyle,
-                        colors = colors,
-                        hapticsEnabled = settings.haptics,
-                        enabled = !isSaving,
-                        onSelected = { if (!isSaving) onSettingsChange(settings.copy(readerChromeStyle = it)) },
-                    )
+                Column {
+                    WelcomeHeader()
+                    SettingsRows {
+                        WelcomeCard(first = true, last = false) {
+                            SettingsControlHeader(
+                                Icons.Rounded.ViewAgenda,
+                                stringResource(R.string.welcome_controls_title),
+                                stringResource(R.string.welcome_controls_subtitle),
+                            )
+                            ReaderChromeStylePicker(
+                                selected = settings.readerChromeStyle,
+                                colors = colors,
+                                hapticsEnabled = settings.haptics,
+                                enabled = !isSaving,
+                                onSelected = { if (!isSaving) onSettingsChange(settings.copy(readerChromeStyle = it)) },
+                            )
+                        }
+                        WelcomeCard(first = false, last = false) {
+                            SettingsControlHeader(
+                                Icons.AutoMirrored.Rounded.Login,
+                                stringResource(R.string.settings_startup_title),
+                                stringResource(R.string.welcome_startup_subtitle),
+                            )
+                            WelcomeStartupPicker(
+                                selected = settings.startupDestination,
+                                enabled = !isSaving,
+                                onSelected = { onSettingsChange(settings.copy(startupDestination = it)) },
+                            )
+                        }
+                        WelcomeCard(first = false, last = true) {
+                            SettingsControlHeader(
+                                Icons.Rounded.Palette,
+                                stringResource(R.string.welcome_theme_title),
+                                stringResource(R.string.welcome_theme_subtitle),
+                            )
+                            ThemePreviewPicker(
+                                settings = settings,
+                                effectiveTheme = theme,
+                                enabled = !isSaving,
+                                onSelect = {
+                                    if (!isSaving) onSettingsChange(settings.copy(theme = it, followSystemTheme = false))
+                                },
+                            )
+                        }
+                    }
                 }
-                WelcomeCard {
-                    SettingsControlHeader(
-                        Icons.AutoMirrored.Rounded.Login,
-                        stringResource(R.string.settings_startup_title),
-                        stringResource(R.string.welcome_startup_subtitle),
-                    )
-                    WelcomeStartupPicker(
-                        selected = settings.startupDestination,
-                        enabled = !isSaving,
-                        onSelected = { onSettingsChange(settings.copy(startupDestination = it)) },
-                    )
-                }
-                WelcomeCard {
-                    SettingsControlHeader(
-                        Icons.Rounded.Palette,
-                        stringResource(R.string.welcome_theme_title),
-                        stringResource(R.string.welcome_theme_subtitle),
-                    )
-                    ThemePreviewPicker(
-                        settings = settings,
-                        effectiveTheme = theme,
-                        enabled = !isSaving,
-                        onSelect = {
-                            if (!isSaving) onSettingsChange(settings.copy(theme = it, followSystemTheme = false))
-                        },
-                    )
-                }
-                SettingsSectionLabel(stringResource(R.string.settings_theme_automatic))
-                SettingsCard {
+                Column {
+                    SettingsSectionLabel(stringResource(R.string.settings_theme_automatic))
                     ThemeAutomaticControls(
                         settings = settings,
                         enabled = !isSaving,
@@ -168,65 +169,34 @@ fun WelcomeScreen(
 
 @Composable
 private fun WelcomeHeader() {
-    val largeText = LocalDensity.current.fontScale >= 1.4f
-    Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 8.dp)) {
-        BoxWithConstraints(Modifier.fillMaxWidth().heightIn(min = 144.dp)) {
-            Column(
-                Modifier.fillMaxWidth(if (largeText) 1f else .76f),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Text(
-                    stringResource(R.string.welcome_title),
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        fontSize = 34.sp,
-                        lineHeight = 39.sp,
-                        fontWeight = FontWeight.Bold,
-                    ),
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.semantics { heading() },
-                )
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                ) {
-                    Text(
-                        stringResource(R.string.welcome_release_label),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.sp,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
-                    )
-                }
-            }
-            // Reserved for the future SVG. Leave it empty, without placeholder
-            // artwork, borders or accessibility text. It can be replaced here.
-            if (!largeText) {
-                Box(
-                    Modifier.align(Alignment.TopEnd).width(maxWidth * .24f).height(144.dp)
-                        .clearAndSetSemantics { },
-                )
-            }
-        }
+    Column(
+        Modifier.fillMaxWidth().padding(start = 6.dp, end = 6.dp, bottom = SpaceAfterHeading),
+        verticalArrangement = Arrangement.spacedBy(SpaceAfterHeading),
+    ) {
+        Text(
+            stringResource(R.string.welcome_title),
+            style = MaterialTheme.typography.headlineLarge.copy(
+                fontSize = 34.sp,
+                lineHeight = 39.sp,
+                fontWeight = FontWeight.Bold,
+            ),
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.semantics { heading() },
+        )
         Text(
             stringResource(R.string.welcome_subtitle),
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.padding(top = 12.dp, bottom = 8.dp),
         )
     }
 }
 
 @Composable
-private fun WelcomeCard(content: @Composable ColumnScope.() -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(28.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerLowest,
-        tonalElevation = 0.dp,
-    ) {
+private fun WelcomeCard(first: Boolean, last: Boolean, content: @Composable ColumnScope.() -> Unit) {
+    SettingsCardRow(first = first, last = last) {
         Column(
             Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+            verticalArrangement = Arrangement.spacedBy(SpaceAfterHeading),
             content = content,
         )
     }

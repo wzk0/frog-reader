@@ -1,14 +1,10 @@
 package com.example.frogreader.ui.settings
 
+import com.example.frogreader.ui.components.AppSubpageNavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
-import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.ContentTransform
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -25,6 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.CloudUpload
 import androidx.compose.material.icons.rounded.Fingerprint
@@ -63,6 +60,7 @@ private enum class SettingsDestination {
     ROOT,
     THEME,
     READING,
+    BOOK_SOURCES,
     PRIVACY,
     BACKUP,
 }
@@ -73,65 +71,70 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory),
     backupViewModel: BackupViewModel = viewModel(factory = BackupViewModel.Factory),
 ) {
-    val settings by viewModel.appSettings.collectAsStateWithLifecycle()
-    val backupFrequency by backupViewModel.frequency.collectAsStateWithLifecycle()
-    val lastBackupAt by backupViewModel.lastBackupAt.collectAsStateWithLifecycle()
+    val settings = viewModel.appSettings.collectAsStateWithLifecycle()
+    val backupFrequency = backupViewModel.frequency.collectAsStateWithLifecycle()
+    val lastBackupAt = backupViewModel.lastBackupAt.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val externalAppSaveFailed = stringResource(R.string.external_text_save_failed)
-    var destination by rememberSaveable { mutableStateOf(SettingsDestination.ROOT) }
     var showAbout by rememberSaveable { mutableStateOf(false) }
-
-    BackHandler(destination != SettingsDestination.ROOT) {
-        destination = SettingsDestination.ROOT
-    }
+    val navController = rememberNavController()
 
     Box(Modifier.fillMaxSize()) {
-        AnimatedContent(
-            targetState = destination,
-            transitionSpec = { settingsTransition() },
-            label = "settingsPage",
-        ) { page ->
-            when (page) {
-                SettingsDestination.ROOT -> SettingsEntryPage(
-                    settings = settings,
-                    backupFrequency = backupFrequency,
-                    lastBackupAt = lastBackupAt,
+        AppSubpageNavHost(navController, SettingsDestination.ROOT.name) {
+            composable(SettingsDestination.ROOT.name) {
+                SettingsEntryPage(
+                    settings = settings.value,
+                    backupFrequency = backupFrequency.value,
+                    lastBackupAt = lastBackupAt.value,
                     onBack = onBack,
-                    onOpenTheme = { destination = SettingsDestination.THEME },
-                    onOpenReading = { destination = SettingsDestination.READING },
-                    onOpenPrivacy = { destination = SettingsDestination.PRIVACY },
-                    onOpenBackup = { destination = SettingsDestination.BACKUP },
+                    onOpenTheme = { navController.navigate(SettingsDestination.THEME.name) { launchSingleTop = true } },
+                    onOpenReading = { navController.navigate(SettingsDestination.READING.name) { launchSingleTop = true } },
+                    onOpenBookSources = { navController.navigate(SettingsDestination.BOOK_SOURCES.name) { launchSingleTop = true } },
+                    onOpenPrivacy = { navController.navigate(SettingsDestination.PRIVACY.name) { launchSingleTop = true } },
+                    onOpenBackup = { navController.navigate(SettingsDestination.BACKUP.name) { launchSingleTop = true } },
                     onOpenAbout = { showAbout = true },
                 )
+            }
 
-                SettingsDestination.THEME -> ThemeSettingsPage(
-                    settings = settings,
+            composable(SettingsDestination.THEME.name) {
+                ThemeSettingsPage(
+                    settings = settings.value,
                     onUpdate = viewModel::update,
-                    onBack = { destination = SettingsDestination.ROOT },
+                    onBack = { navController.popBackStack() },
                 )
+            }
 
-                SettingsDestination.READING -> ReadingSettingsPage(
-                    settings = settings,
+            composable(SettingsDestination.READING.name) {
+                ReadingSettingsPage(
+                    settings = settings.value,
                     onUpdate = viewModel::update,
                     saveExternalApp = viewModel::saveExternalApp,
                     onExternalAppSaveFailed = {
                         scope.launch { snackbarHostState.showSnackbar(externalAppSaveFailed) }
                     },
-                    onBack = { destination = SettingsDestination.ROOT },
+                    onBack = { navController.popBackStack() },
                 )
+            }
 
-                SettingsDestination.PRIVACY -> PrivacySettingsPage(
-                    settings = settings,
+            composable(SettingsDestination.BOOK_SOURCES.name) {
+                BookSourcesSettingsPage { navController.popBackStack() }
+            }
+
+            composable(SettingsDestination.PRIVACY.name) {
+                PrivacySettingsPage(
+                    settings = settings.value,
                     onUpdate = viewModel::update,
-                    onBack = { destination = SettingsDestination.ROOT },
+                    onBack = { navController.popBackStack() },
                 )
+            }
 
-                SettingsDestination.BACKUP -> BackupSettingsPage(
-                    settings = settings,
+            composable(SettingsDestination.BACKUP.name) {
+                BackupSettingsPage(
+                    settings = settings.value,
                     onUpdate = viewModel::update,
                     viewModel = backupViewModel,
-                    onBack = { destination = SettingsDestination.ROOT },
+                    onBack = { navController.popBackStack() },
                 )
             }
         }
@@ -156,17 +159,6 @@ fun SettingsScreen(
     }
 }
 
-private fun AnimatedContentTransitionScope<SettingsDestination>.settingsTransition(): ContentTransform {
-    val forward = targetState != SettingsDestination.ROOT
-    val direction = if (forward) {
-        AnimatedContentTransitionScope.SlideDirection.Left
-    } else {
-        AnimatedContentTransitionScope.SlideDirection.Right
-    }
-    return (slideIntoContainer(towards = direction) + fadeIn()) togetherWith
-        (slideOutOfContainer(towards = direction) + fadeOut())
-}
-
 @Composable
 internal fun SettingsEntryPage(
     settings: AppSettings,
@@ -178,6 +170,7 @@ internal fun SettingsEntryPage(
     onOpenPrivacy: () -> Unit,
     onOpenBackup: () -> Unit,
     onOpenAbout: () -> Unit,
+    onOpenBookSources: () -> Unit = {},
 ) {
     val systemDark = isSystemInDarkTheme()
     val effectiveTheme = settings.effectiveTheme(systemDark)
@@ -208,11 +201,18 @@ internal fun SettingsEntryPage(
                 trailing = { ThemeSwatch() },
             )
             SettingsNavigationRow(
-                modifier = Modifier.connectedCard(scheme, connectedCardShape(first = false)),
+                modifier = Modifier.connectedCard(scheme, connectedCardShape(first = false, last = false)),
                 icon = Icons.AutoMirrored.Rounded.MenuBook,
                 title = stringResource(R.string.settings_reading_title),
                 subtitle = readingSummary(settings),
                 onClick = onOpenReading,
+            )
+            SettingsNavigationRow(
+                modifier = Modifier.connectedCard(scheme, connectedCardShape(first = false)),
+                icon = Icons.Outlined.Language,
+                title = stringResource(R.string.book_sources_title),
+                subtitle = stringResource(R.string.book_sources_summary),
+                onClick = onOpenBookSources,
             )
         }
 

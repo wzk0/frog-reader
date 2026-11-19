@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.settings
 
+import com.example.frogreader.ui.components.SpaceBeforeHeading
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
 import androidx.compose.animation.AnimatedVisibility
@@ -108,7 +109,7 @@ internal fun ReadingSettingsPage(
             ReaderPanelBehaviorSettingsRows(settings, onUpdate)
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(SpaceBeforeHeading))
         SettingsSectionLabel(stringResource(R.string.settings_controls_gestures_section))
         SettingsRows {
             SettingsCardRow(last = false) {
@@ -146,7 +147,7 @@ internal fun ReadingSettingsPage(
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(SpaceBeforeHeading))
         SettingsSectionLabel(stringResource(R.string.settings_selected_text_section))
         SettingsRows {
             ExternalTextAction.entries.forEachIndexed { index, action ->
@@ -177,7 +178,7 @@ internal fun ReadingSettingsPage(
             }
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(SpaceBeforeHeading))
         SettingsSectionLabel(stringResource(R.string.settings_screen_startup_section))
         SettingsRows {
             SettingsCardRow(last = false) {

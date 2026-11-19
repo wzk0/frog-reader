@@ -1,11 +1,9 @@
 package com.example.frogreader.ui.reader
 
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
+import com.example.frogreader.ui.components.rememberPredictiveBackMotion
 import com.example.frogreader.ui.components.connectedCardShape
 import com.example.frogreader.ui.components.connectedCard
 import com.example.frogreader.ui.components.ConnectedCardGap
-import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -39,13 +37,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.pluralStringResource
@@ -59,7 +54,6 @@ import androidx.compose.ui.unit.dp
 import com.example.frogreader.R
 import com.example.frogreader.data.model.ContentElement
 import kotlinx.coroutines.yield
-import kotlinx.coroutines.CancellationException
 
 // ------------------------------------------------------------------- engine
 
@@ -181,24 +175,14 @@ fun ReaderSearchOverlay(
     contentComplete: Boolean = true,
 ) {
     val keyboard = LocalSoftwareKeyboardController.current
-    var backProgress by remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(visible) {
-        if (visible) backProgress = 0f
-    }
-    PredictiveBackHandler(enabled = visible) { progress ->
-        try {
-            progress.collect { event -> backProgress = event.progress.coerceIn(0f, 1f) }
-            keyboard?.hide()
-            onClose()
-        } catch (cancelled: CancellationException) {
-            backProgress = 0f
-            throw cancelled
-        }
+    val backMotion = rememberPredictiveBackMotion(visible) {
+        keyboard?.hide()
+        onClose()
     }
 
     AnimatedVisibility(
         visible = visible,
-        modifier = modifier.graphicsLayer { alpha = 1f - backProgress },
+        modifier = modifier.then(backMotion),
         enter = fadeIn(tween(150)),
         exit = fadeOut(tween(100)),
     ) {

@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.settings
 
+import com.example.frogreader.ui.components.SpaceBeforeHeading
 import androidx.compose.foundation.shape.RoundedCornerShape
 import com.example.frogreader.ui.components.connectedCardShape
 import com.example.frogreader.ui.components.cardSurface
@@ -119,7 +120,7 @@ internal fun BackupSettingsPage(
                 pickBackup.launch(arrayOf("application/zip", "application/octet-stream"))
             },
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(SpaceBeforeHeading))
         SettingsSectionLabel(stringResource(R.string.backup_include_now_section))
         SettingsRows(modifier = Modifier.selectableGroup()) {
             BackupScopeRow(
@@ -146,7 +147,7 @@ internal fun BackupSettingsPage(
         }
         SettingsHelper(stringResource(R.string.backup_automatic_data_only_helper))
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(SpaceBeforeHeading))
         SettingsSectionLabel(stringResource(R.string.backup_automatic_section))
         SettingsRows {
             SettingsCardRow(last = false) {

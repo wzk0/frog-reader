@@ -63,7 +63,6 @@ internal fun FrogAddFab(
         shape = buttonShape,
         containerColor = colors.primaryContainer,
         contentColor = colors.onPrimaryContainer,
-        elevation = FloatingActionButtonDefaults.elevation(0.dp, 0.dp, 0.dp, 0.dp),
         icon = {
             if (importing) LoadingIndicator(Modifier.size(24.dp), color = colors.onPrimaryContainer)
             else Icon(Icons.Rounded.Add, null, Modifier.size(24.dp).graphicsLayer { rotationZ = rotation })

@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.library
 
+import com.example.frogreader.ui.components.SpaceBeforeHeading
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import androidx.compose.runtime.getValue
 import com.example.frogreader.ui.components.connectedCardShape
 import com.example.frogreader.ui.components.connectedCard
@@ -278,7 +280,7 @@ fun ScanFolderScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(start = 20.dp, end = 16.dp, top = 18.dp, bottom = 10.dp),
+                            .padding(start = 20.dp, end = 16.dp, top = SpaceBeforeHeading, bottom = SpaceAfterHeading),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
                     ) {

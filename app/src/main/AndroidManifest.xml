@@ -5,9 +5,7 @@
     <!-- Unlocking the app. A normal permission: granted at install, never asked for. -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <!-- Optional typeface downloads from the font sheet. Nothing else in the
-         app talks to the network: books, notes and settings never leave the
-         device. -->
+    <!-- Optional typeface downloads and online book sources. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Cover capture is optional; CAMERA permission must not imply required hardware. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />
@@ -87,6 +85,7 @@
         android:name=".FrogReaderApp"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
+        android:enableOnBackInvokedCallback="true"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_frogus"
         android:label="@string/app_name"
@@ -94,6 +93,7 @@
         tools:targetApi="33"
         android:roundIcon="@mipmap/ic_frogus_round"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.FrogReader">
 
         <activity

@@ -1,6 +1,6 @@
 package com.example.frogreader.ui.profile
 
-import androidx.activity.compose.BackHandler
+import com.example.frogreader.ui.components.rememberPredictiveBackMotion
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -118,7 +118,7 @@ internal fun ProfileName(
         }
     }
 
-    if (!preview) BackHandler(enabled = editing && isActive) { finishEditing() }
+    val backMotion = rememberPredictiveBackMotion(!preview && editing && isActive) { finishEditing() }
     LaunchedEffect(isActive) {
         // Top-level pages stay composed in the pager. An inactive profile must
         // end its own editor without clearing a different screen's focus.
@@ -150,7 +150,7 @@ internal fun ProfileName(
         }
     }
     BoxWithConstraints(
-        modifier = modifier.heightIn(max = maxHeight * density.fontScale.coerceAtLeast(1f)),
+        modifier = modifier.then(backMotion).heightIn(max = maxHeight * density.fontScale.coerceAtLeast(1f)),
         contentAlignment = Alignment.CenterStart,
     ) {
         val width = with(density) { maxWidth.roundToPx() }

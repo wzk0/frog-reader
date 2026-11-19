@@ -1,5 +1,8 @@
 package com.example.frogreader
 
+import com.example.frogreader.ui.components.predictiveBackEnter
+import com.example.frogreader.ui.components.predictiveBackExit
+import com.example.frogreader.ui.components.rememberPredictiveBackMotion
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.selection.selectableGroup
@@ -77,6 +80,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Search
+import com.example.frogreader.ui.settings.BookSourceSearchPage
+import com.example.frogreader.ui.nav.BookSourceSearchRoute
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.FileOpen
@@ -589,7 +595,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                     // Hidden navigation must not respond to Back while the
                                     // welcome screen owns interaction, especially during save.
-                                    BackHandler { if (!savingWelcome) finish() }
+                                    BackHandler(enabled = savingWelcome) { }
                                 }
                             }
                         }
@@ -735,9 +741,8 @@ class MainActivity : ComponentActivity() {
         var libraryDockVisible by remember { mutableStateOf(true) }
         var libraryTabSwipeEnabled by remember { mutableStateOf(true) }
 
-        BackHandler(fabMenuExpanded) { fabMenuExpanded = false }
         // Back gesture on Profile tab returns to Library tab:
-        BackHandler(enabled = onTopLevel && !fabMenuExpanded && backReturnsToLibrary) {
+        val tabBackMotion = rememberPredictiveBackMotion(onTopLevel && !fabMenuExpanded && backReturnsToLibrary) {
             tabSwitch.select(0)
         }
 
@@ -798,6 +803,7 @@ class MainActivity : ComponentActivity() {
                 }
             },
             onScanFolder = { folderPicker.launch(storageRootUri()) },
+            onSearchSources = { navController.navigate(BookSourceSearchRoute()) },
             onNewShelf = {
                 onTabSelected(NavTab.LIBRARY)
                 libraryViewModel.createShelf()
@@ -811,7 +817,7 @@ class MainActivity : ComponentActivity() {
             NavHost(
                 navController = navController,
                 startDestination = startupReaderBookId?.let { ReaderRoute(it) } ?: LibraryRoute,
-                modifier = Modifier.fillMaxSize().onGloballyPositioned {
+                modifier = Modifier.fillMaxSize().then(tabBackMotion).onGloballyPositioned {
                     navigationHasLayout = it.size.width > 0 && it.size.height > 0
                 },
                 enterTransition = {
@@ -833,11 +839,8 @@ class MainActivity : ComponentActivity() {
                 },
                 popEnterTransition = { appPopEnter() },
                 popExitTransition = { appPopExit() },
-                // Navigation 2.10 resolves gesture transitions independently
-                // of ordinary pop transitions. Share the policy so a gesture
-                // can seek/cancel the same motion as the Back button.
-                predictivePopEnterTransition = { _ -> appPopEnter() },
-                predictivePopExitTransition = { _ -> appPopExit() },
+                predictivePopEnterTransition = { _ -> predictiveBackEnter() },
+                predictivePopExitTransition = { _ -> predictiveBackExit() },
             ) {
                 composable<LibraryRoute> {
                     HorizontalPager(
@@ -860,6 +863,7 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate(ReaderRoute(book.id))
                                 },
                                 onOpenSettings = { navController.navigate(SettingsRoute) },
+                                onSearchBookSources = { keyword -> navController.navigate(BookSourceSearchRoute(keyword)) },
                                 onEditBook = { navController.navigate(BookInfoRoute(it.id, editRequested = true)) },
                                 onBookInfo = { navController.navigate(BookInfoRoute(it.id)) },
                             )
@@ -1021,7 +1025,7 @@ class MainActivity : ComponentActivity() {
                     // A reader used as the graph's start destination has no
                     // library entry underneath it. Back still means Library,
                     // not closing the activity.
-                    BackHandler(enabled = navController.previousBackStackEntry == null) {
+                    val readerBackMotion = rememberPredictiveBackMotion(navController.previousBackStackEntry == null) {
                         openLibrary()
                     }
                     ReaderScreen(
@@ -1032,14 +1036,15 @@ class MainActivity : ComponentActivity() {
                             if (!navController.popBackStack()) openLibrary()
                         },
                         onExitToLibrary = openLibrary,
-                        contentMotion = Modifier.animateEnterExit(
-                            enter = EnterTransition.None,
-                            exit = scaleOut(
-                                ReaderCloseMotion,
-                                targetScale = 0.86f,
-                                transformOrigin = TransformOrigin.Center,
-                            ),
-                        ),
+                        contentMotion = readerBackMotion,
+                    )
+                }
+
+                composable<BookSourceSearchRoute> { entry ->
+                    BookSourceSearchPage(
+                        initialKeyword = entry.toRoute<BookSourceSearchRoute>().keyword,
+                        onBack = { navController.popBackStack() },
+                        onBookAdded = libraryViewModel::revealBook,
                     )
                 }
 
@@ -1206,6 +1211,7 @@ internal fun FrogMainScaffold(
     onAddBook: () -> Unit,
     onScanFolder: () -> Unit,
     onNewShelf: () -> Unit,
+    onSearchSources: (() -> Unit)? = null,
     readingQueueActive: Boolean = false,
     readingEntryFlowActive: Boolean = readingQueueActive,
     readingQueueFab: ReadingQueueFabState? = null,
@@ -1281,6 +1287,7 @@ internal fun FrogMainScaffold(
                     onExpandedChange = onImportExpandedChange,
                     onAddBook = onAddBook,
                     onScanFolder = onScanFolder,
+                    onSearchSources = onSearchSources,
                     onNewShelf = onNewShelf,
                 )
         }
@@ -1412,6 +1419,7 @@ private fun ImportFabMenu(
     onAddBook: () -> Unit,
     onScanFolder: () -> Unit,
     onNewShelf: () -> Unit,
+    onSearchSources: (() -> Unit)?,
 ) {
     // Hand-rolled rather than FloatingActionButtonMenu. That component staggers
     // its items by animating an INTEGER — the count of visible ones — with a
@@ -1420,14 +1428,29 @@ private fun ImportFabMenu(
     // item switches off in a discrete jump and the pair leaves at visibly
     // different moments. One shared pair of springs instead: both items rise
     // and fade as one thing.
+    val backMotion = rememberPredictiveBackMotion(expanded) { onExpandedChange(false) }
     Column(
+        modifier = backMotion,
         // Bottom anchored by the overlay: items expand upwards while the
         // rounded-square toggle stays level with the navigation capsule.
         horizontalAlignment = Alignment.End,
     ) {
+        if (onSearchSources != null) {
+            FabMenuItem(
+                icon = Icons.Outlined.Search,
+                shape = connectedCardShape(last = false),
+                label = stringResource(R.string.book_sources_search),
+                visible = expanded,
+                onClick = {
+                    onExpandedChange(false)
+                    onSearchSources()
+                },
+            )
+            FabMenuSpacer(expanded, ConnectedCardGap)
+        }
         FabMenuItem(
             icon = Icons.Rounded.FileOpen,
-            shape = connectedCardShape(last = false),
+            shape = connectedCardShape(first = onSearchSources == null, last = false),
             label = stringResource(R.string.fab_add_book),
             visible = expanded,
             onClick = {
@@ -1704,12 +1727,12 @@ private fun AnimatedContentTransitionScope<NavBackStackEntry>.appPopExit(): Exit
         else -> popExit()
     }
 
-// Reader closing uses a bounded, non-overshooting curve for both layers.
-// Navigation owns it, so Back gestures can seek and cancel the same transition.
+// The reader keeps its standard close motion for non-gesture navigation.
 private val ReaderCloseMotion = tween<Float>(durationMillis = 220, easing = LinearOutSlowInEasing)
 
 private fun readerCloseExit(): ExitTransition =
-    fadeOut(ReaderCloseMotion)
+    fadeOut(ReaderCloseMotion) +
+        scaleOut(ReaderCloseMotion, targetScale = 0.86f, transformOrigin = TransformOrigin.Center)
 
 private fun readerReturnEnter(): EnterTransition =
     fadeIn(ReaderCloseMotion) +

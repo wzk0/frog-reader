@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.library
 
+import com.example.frogreader.ui.components.rememberPredictiveBackMotion
+import com.example.frogreader.ui.components.SpaceAfterHeading
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.BackHandler
@@ -90,7 +92,7 @@ fun BookInfoScreen(
     val keyboard = LocalSoftwareKeyboardController.current
     val cancelEdit = { focus.clearFocus(); keyboard?.hide(); metadata?.discardChanges(); editing = false }
     val closeEdit = { if (editor?.busy != true) { if (editor?.dirty == true) discard = true else cancelEdit() } }
-    BackHandler(editing, onBack = closeEdit)
+    val backMotion = rememberPredictiveBackMotion(editing && !state.removingReading, onBack = closeEdit)
     BackHandler(state.removingReading) { }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) metadata?.pickCover(uri) }
     val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri -> if (uri != null) metadata?.export(uri) }
@@ -159,7 +161,7 @@ fun BookInfoScreen(
     BookInfoContent(state, onBack = { if (!state.removingReading) { if (editing) closeEdit() else onBack() } },
         onEdit = { if (state.readingLogEntry != null) editReview() else editing = true }, onShare = model::share,
         onReview = editReview, onOpenReadingLog = onOpenReadingLog, onRemoveReading = { removingReading = true },
-        editor = editor, editActions = actions)
+        editor = editor, editActions = actions, modifier = backMotion)
     if (removingReading) AlertDialog(onDismissRequest = { if (!state.removingReading) removingReading = false },
         containerColor = MaterialTheme.colorScheme.floatingSurface,
         title = { Text(stringResource(R.string.reading_log_delete_title)) },
@@ -190,7 +192,7 @@ fun BookInfoScreen(
                 Text(stringResource(R.string.reading_log_review_action), Modifier.weight(1f), style = MaterialTheme.typography.titleLarge)
                 IconButton(onClick = closeReview, enabled = !state.reviewSaving) { Icon(Icons.Rounded.Close, stringResource(R.string.reading_queue_close)) }
             }
-            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(vertical = 12.dp),
+            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()).padding(top = SpaceAfterHeading, bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 ReadingLogRatingEditor(draftRating, { draftRating = it }, !state.reviewSaving)
                 BookDetailField(draftReview, label = stringResource(R.string.reading_log_review),
@@ -231,6 +233,7 @@ internal fun BookInfoContent(
     onReview: () -> Unit = {}, onOpenReadingLog: (String) -> Unit = {}, onRemoveReading: () -> Unit = {},
     editor: MetadataEditorState? = null, editActions: BookDetailsEditActions = BookDetailsEditActions(),
     scrollState: ScrollState = rememberScrollState(),
+    modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
     val editing = editor != null
@@ -239,7 +242,7 @@ internal fun BookInfoContent(
     var menu by remember { mutableStateOf(false) }
     var aboutSaving by rememberSaveable { mutableStateOf(false) }
     var errorDetails by rememberSaveable(editor?.error) { mutableStateOf(false) }
-    Surface(Modifier.fillMaxSize(), color = colors.surface, contentColor = colors.onSurface) {
+    Surface(modifier.fillMaxSize(), color = colors.surface, contentColor = colors.onSurface) {
         Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack, enabled = editor?.busy != true && !state.removingReading) {
