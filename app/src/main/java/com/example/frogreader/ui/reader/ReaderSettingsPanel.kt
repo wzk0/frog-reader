@@ -39,6 +39,7 @@ fun ReaderSettingsPanel(
     pageCounterInfo: PageCounterInfo? = null,
     modifier: Modifier = Modifier,
     scrollState: ScrollState = rememberScrollState(),
+    defaults: ReaderSettings = ReaderSettings(),
 ) {
     Box(modifier.fillMaxWidth()) {
         Column(
@@ -55,6 +56,7 @@ fun ReaderSettingsPanel(
                 onPeekHeight = onPeekHeight,
                 publisherStyle = publisherStyle,
                 pageCounterInfo = pageCounterInfo,
+                defaults = defaults,
             )
         }
         ReaderSettingsScrollbar(

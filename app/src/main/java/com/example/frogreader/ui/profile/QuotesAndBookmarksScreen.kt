@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.profile
 
+import com.example.frogreader.ui.components.FrogTextFieldShape
 import com.example.frogreader.ui.components.rememberPredictiveBackMotion
 import com.example.frogreader.ui.components.SpaceAfterHeading
 import com.example.frogreader.ui.components.cardSurface
@@ -222,7 +223,7 @@ internal fun QuotesAndBookmarksContent(
                             Icon(Icons.Rounded.Close, stringResource(R.string.quotes_bookmarks_clear_search))
                         }
                     }} else null,
-                    shape = RoundedCornerShape(18.dp),
+                    shape = FrogTextFieldShape,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
                 )
             }
@@ -647,8 +648,8 @@ private fun ThoughtEditor(editor: QuoteThoughtEditor, onChange: (String) -> Unit
             value = editor.text, onValueChange = onChange, label = { Text(stringResource(R.string.quotes_bookmarks_my_thoughts)) },
             placeholder = { Text(stringResource(R.string.quotes_bookmarks_thought_hint)) },
             modifier = Modifier.fillMaxWidth(), minLines = 3, maxLines = 8,
-            enabled = !editor.saving, isError = editor.failed, shape = RoundedCornerShape(14.dp),
-            supportingText = if (editor.failed) {{ Text(stringResource(R.string.quotes_bookmarks_thought_error)) }} else null,
+            enabled = !editor.saving, isError = editor.failed, shape = FrogTextFieldShape,
+                supportingText = if (editor.failed) {{ Text(stringResource(R.string.quotes_bookmarks_thought_error)) }} else null,
         )
         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
             TextButton(onClick = onCancel, enabled = !editor.saving) { Text(stringResource(R.string.backup_cancel)) }

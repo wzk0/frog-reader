@@ -6,7 +6,7 @@
 
 - 本仓库：`github.com/wzk0/frog-reader`（上游 `KNITIPKA/frog-reader`，GPL-3.0-only）
 - 包名 `github.wzk0.frogreader`，namespace `com.example.frogreader`（namespace 与包名解耦，改包名不用动 Kotlin 包路径）
-- 纯离线阅读器 + 一个例外：字体预设下载（唯一的网络请求）
+- 本地书库与阅读可离线使用。字体预设下载、OPDS 目录浏览、搜索、封面和图书下载需要联网。
 
 ---
 
@@ -179,7 +179,7 @@ UI 层只看到合并后的 `Book`；保存时 `BookRepository` 比较新旧对�
 
 ---
 
-## 7. 一个网络请求的正确写法（字体预设下载）
+## 7. 字体预设下载与 OPDS 网络请求
 
 `data/FontDownload.kt` + `ui/reader/PresetFonts.kt`：
 
@@ -195,6 +195,8 @@ UI 层只看到合并后的 `Book`；保存时 `BookRepository` 比较新旧对�
   并钉 commit SHA（`@<sha>`），厂商有自家 CDN 就优先用（MiSans → `cdn.cnbj1.fds.api.mi-img.com`）。
 - Android 的 `HttpURLConnection` 会走系统代理，所以用户开 Clash/mihomo 时下载同样生效。
 - 目录/清单里每条都标真实体积和许可；`assets/licenses/third-party-notices.txt` 单独列「可下载（不随包分发）」。
+
+OPDS 网络与解析逻辑集中在 `data/Opds.kt`，支持用户配置的 HTTP/HTTPS 目录。目录测速结果批量写入独立的原子 JSON 文件。
 
 ---
 

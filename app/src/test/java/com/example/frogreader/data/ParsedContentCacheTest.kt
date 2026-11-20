@@ -38,6 +38,7 @@ class ParsedContentCacheTest {
         val content = richBook()
         val cache = cache()
         assertTrue(cache.save("book", source, content))
+        assertTrue(cache.hasCompleteSnapshot("book", source))
         val restored = requireNotNull(cache.load("book", source))
         assertTrue(restored.complete)
         assertEquals(Json.encodeToString(BookContent.serializer(), content), Json.encodeToString(BookContent.serializer(), restored.content))
@@ -56,6 +57,7 @@ class ParsedContentCacheTest {
         val modified = file.lastModified()
         file.writeText("X".repeat(file.length().toInt()))
         assertTrue(file.setLastModified(modified))
+        assertFalse(cache.hasCompleteSnapshot("book", file))
         assertNull(cache.load("book", file))
     }
 
@@ -64,6 +66,7 @@ class ParsedContentCacheTest {
         assertTrue(cache.save("book", source, plainBook("Preview"), complete = false))
         val originalBytes = cache.entryFile("book", complete = false).readBytes()
         assertFalse(cache.save("book", source, plainBook("Long paragraph ".repeat(1000))))
+        assertFalse(cache.hasCompleteSnapshot("book", source))
         assertArrayEquals(originalBytes, cache.entryFile("book", complete = false).readBytes())
         assertFalse(requireNotNull(cache.load("book", source)).complete)
         assertTrue(cache.entryFile("book").parentFile!!.listFiles()!!.none { it.extension == "tmp" })

@@ -14,6 +14,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.example.frogreader.data.PageMargins
 import com.example.frogreader.data.ReaderSettings
@@ -533,14 +534,21 @@ object ReaderMetrics {
 
     /** Reader preferences supply defaults; authored properties win in publisher mode. */
     private fun applyTypography(style: TextStyle, settings: ReaderSettings, authored: FontTypography?): TextStyle {
-        val family = style.fontFamily ?: return style
+        val weightOffset = settings.fontWeight.coerceIn(100, 900) - 400
+        val spacing = settings.letterSpacingPercent.coerceIn(-5, 20)
+        val adjusted = style.copy(
+            fontWeight = if (weightOffset == 0) style.fontWeight
+                else FontWeight(((style.fontWeight?.weight ?: 400) + weightOffset).coerceIn(1, 1000)),
+            letterSpacing = if (spacing == 0) style.letterSpacing else (spacing / 100f).em,
+        )
+        val family = adjusted.fontFamily ?: return adjusted
         val css = authored.takeIf { settings.bookStyles }
         val request = FontTypography(
             variationAxes = css?.variationAxes,
             stretchPercent = css?.stretchPercent,
             opticalSizing = css?.opticalSizing,
         )
-        return style.copy(fontFamily = resolveFontTypography(family, style.fontSize.value, request))
+        return adjusted.copy(fontFamily = resolveFontTypography(family, adjusted.fontSize.value, request))
     }
 
     private fun autoTextDirection(language: String?): TextDirection =

@@ -199,12 +199,14 @@ class ReaderViewModel(
         val settings: ReaderSettings,
         val partial: Boolean = false,
         internal val itemRange: IntRange? = null,
+        internal val priorityTarget: ReaderReturnLocation.Main? = null,
     )
 
     private val _pagination = MutableStateFlow<PaginationHolder?>(null)
     val pagination = _pagination.asStateFlow()
     private var paginationJob: Job? = null
     private var paginationKeyInFlight: String? = null
+    private var movingPaginationHolder: PaginationHolder? = null
     private val presentedPagination = MutableStateFlow<PaginationHolder?>(null)
     private var openingTrace = ReaderLoadTrace()
 
@@ -212,6 +214,11 @@ class ReaderViewModel(
 
     internal fun onPaginationPresented(holder: PaginationHolder) {
         if (_pagination.value === holder) presentedPagination.value = holder
+    }
+
+    internal fun onPaginationGesture(holder: PaginationHolder, moving: Boolean) {
+        if (moving && _pagination.value === holder) movingPaginationHolder = holder
+        else if (movingPaginationHolder === holder) movingPaginationHolder = null
     }
 
     /** Last known reading position (flat item index), shared by both modes. */
@@ -306,7 +313,8 @@ class ReaderViewModel(
         quickRange: IntRange? = null,
         awaitPreviewPresentation: Boolean = false,
         contentComplete: Boolean = true,
-        full: suspend () -> List<BookPage>,
+        pendingDestination: () -> ReaderReturnLocation.Main? = { null },
+        full: suspend (suspend (List<BookPage>) -> Unit) -> List<BookPage>,
     ) {
         if (paginationKeyInFlight == key) return
         // Anything else in flight computes an outdated key — cancel it even
@@ -332,12 +340,16 @@ class ReaderViewModel(
                             key, quickPages, settings, partial = true,
                             itemRange = quickRange,
                         )
-                        withContext(Dispatchers.Main.immediate) { _pagination.value = preview }
-                        // Cache validation can allocate the rest of a huge book.
-                        // Let the preview reach a frame before starting that work.
-                        if (awaitPreviewPresentation) presentedPagination.first { it === preview }
-                        // Keep extending the readable prefix after its first frame.
-                        // Three quick pages are a head start, not a navigation wall.
+                        val shown = withContext(Dispatchers.Main.immediate) {
+                            val previous = _pagination.value
+                            if (previous != null && previous.key.substringBefore("|prefix=") == key.substringBefore("|prefix=") &&
+                                previous.partial && !extendsReaderFrontier(previous.pages, quickPages)
+                            ) false else {
+                                _pagination.value = preview
+                                true
+                            }
+                        }
+                        if (shown && awaitPreviewPresentation) presentedPagination.first { it?.key == key }
                     }
                 }
                 val cacheStarted = System.nanoTime()
@@ -351,7 +363,31 @@ class ReaderViewModel(
                     return@launch
                 }
                 val fullStarted = System.nanoTime()
-                val pages = closedPrefixPages(full(), items, contentComplete)
+                val pages = closedPrefixPages(full { closed ->
+                    withContext(Dispatchers.Main.immediate) {
+                        val current = _pagination.value
+                        val destination = pendingDestination()
+                        if (destination != null && paginationContainsLocation(closed, destination) &&
+                            (current?.key != key || !paginationContainsLocation(current.pages, destination))
+                        ) {
+                            publishDestinationPages(key, settings, closed.toList(), destination)
+                            return@withContext
+                        }
+                        val sameLayout = current != null && current.key.substringBefore("|prefix=") ==
+                            key.substringBefore("|prefix=")
+                        if (current != null && (movingPaginationHolder === current ||
+                                sameLayout && !extendsReaderFrontier(current.pages, closed))
+                        ) return@withContext
+                        val location = ReaderReturnLocation.Main(currentFlatIndex, currentCharOffset)
+                        if (!paginationContainsLocation(closed, location)) return@withContext
+                        if (current != null && sameLayout) {
+                            val index = ReaderNavigationPolicy.pageIndexForLocation(current.pages, location) ?: return@withContext
+                            if (current.pages.lastIndex - index > 6) return@withContext
+                        }
+                        val range = closed.first().firstItemIndex..closed.last().parts.last().itemIndex
+                        _pagination.value = PaginationHolder(key, closed.toList(), settings, partial = true, itemRange = range)
+                    }
+                }, items, contentComplete)
                 openingTrace.stage("full_pagination", fullStarted, pages.size)
                 // Publish on Main: a job cancelled mid-compute never gets here,
                 // and the bookkeeping above stays single-threaded.
@@ -370,6 +406,51 @@ class ReaderViewModel(
                 repository.trimReaderCaches()
             }
         }
+    }
+
+    internal suspend fun prioritizePagination(
+        key: String,
+        settings: ReaderSettings,
+        destination: ReaderReturnLocation.Main,
+        paginate: suspend () -> List<BookPage>,
+    ) {
+        if (paginationKeyInFlight != key || hasDestinationPages(key, destination)) return
+        val pages = withContext(Dispatchers.Default) {
+            val resources = repository.retainReaderResources(bookId)
+            try {
+                paginate()
+            } finally {
+                resources?.close()
+            }
+        }
+        if (paginationKeyInFlight == key && !hasDestinationPages(key, destination) &&
+            paginationContainsLocation(pages, destination)
+        ) {
+            publishDestinationPages(key, settings, pages, destination)
+        }
+    }
+
+    private fun hasDestinationPages(key: String, destination: ReaderReturnLocation.Main): Boolean {
+        val current = _pagination.value ?: return false
+        return current.key == key && (!current.partial || paginationContainsLocation(current.pages, destination))
+    }
+
+    private fun publishDestinationPages(
+        key: String,
+        settings: ReaderSettings,
+        pages: List<BookPage>,
+        destination: ReaderReturnLocation.Main,
+    ) {
+        _pagination.value = PaginationHolder(
+            key, pages, settings, partial = true,
+            itemRange = pages.first().firstItemIndex..pages.last().parts.last().itemIndex,
+            priorityTarget = destination,
+        )
+    }
+
+    private fun extendsReaderFrontier(current: List<BookPage>, candidate: List<BookPage>): Boolean {
+        val firstUnread = current.lastOrNull()?.let(ReaderNavigationPolicy::continuationAfter) ?: return true
+        return paginationContainsLocation(candidate, firstUnread)
     }
 
     private fun closedPrefixPages(

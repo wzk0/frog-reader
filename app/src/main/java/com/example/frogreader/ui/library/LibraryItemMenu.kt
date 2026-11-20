@@ -25,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -131,6 +132,7 @@ internal fun LibraryItemMenu(
     onAddBooks: () -> Unit,
     onRemoveFromShelf: () -> Unit,
     onInfo: () -> Unit,
+    onPreparse: (() -> Unit)? = null,
     onEdit: () -> Unit,
     canEdit: Boolean = true,
     onRename: () -> Unit,
@@ -186,6 +188,11 @@ internal fun LibraryItemMenu(
                     icon = Icons.Rounded.Edit,
                     label = stringResource(R.string.library_menu_edit),
                     onClick = onEdit,
+                )
+                if (onPreparse != null) FrogMenuItem(
+                    icon = Icons.Outlined.AutoStories,
+                    label = stringResource(R.string.library_menu_preparse),
+                    onClick = onPreparse,
                 )
                 FrogMenuItem(
                     icon = Icons.Rounded.Info,

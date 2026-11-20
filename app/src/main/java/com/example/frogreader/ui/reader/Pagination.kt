@@ -80,7 +80,7 @@ class PaginationSpec(
     /** Cache key: anything that changes layout must be part of it. */
     val key: String =
         "e$LAYOUT_ENGINE_VERSION | $contentWidthPx x $contentHeightPx | " +
-            "$fontSize | ${settings.lineHeight} | " +
+            "$fontSize | ${settings.lineHeight} | ${settings.fontWeight} | ${settings.letterSpacingPercent} | " +
             "density=${density.density.toBits()}/${density.fontScale.toBits()} | " +
             "${settings.font} | ${settings.customFontPath} | " +
             "fontAxes=${com.example.frogreader.data.fontVariationKey(settings.customFontAxes)} | " +
@@ -108,8 +108,11 @@ class PaginationSpec(
  * It returns after [previewPageCount] closed pages from the anchor's page;
  * an unfinished trailing page is discarded so every returned cut agrees with
  * a complete pass. A shorter source range simply returns all of its pages.
+ *
+ * [onClosedPages] receives periodic checkpoints during the same measurement
+ * pass. The list belongs to the paginator; copy it before retaining it.
  */
-suspend fun paginateBook(
+internal suspend fun paginateBook(
     items: List<ReaderItem>,
     measurer: TextMeasurer,
     spec: PaginationSpec,
@@ -117,6 +120,9 @@ suspend fun paginateBook(
     toIndex: Int = items.size,
     stopAfterLocation: ReaderReturnLocation.Main? = null,
     previewPageCount: Int = 3,
+    cachedChapter: ((Int) -> ReaderChapterPages?)? = null,
+    onRangeComplete: ((List<BookPage>) -> Unit)? = null,
+    onClosedPages: (suspend (List<BookPage>) -> Unit)? = null,
 ): List<BookPage> {
     val pages = mutableListOf<BookPage>()
     var parts = mutableListOf<PagePart>()
@@ -128,10 +134,11 @@ suspend fun paginateBook(
         paginationPreviewReady(pages, target, previewPageCount)
     } == true
 
-    fun closePage() {
+    suspend fun closePage(checkpoint: Boolean = true) {
         if (parts.isNotEmpty()) {
             pages += BookPage(parts.toList(), pageFirstIndex, pageFirstChar)
             parts = mutableListOf()
+            if (checkpoint && onClosedPages != null && pages.size % 12 == 0) onClosedPages(pages)
         }
         usedPx = 0
     }
@@ -386,12 +393,11 @@ suspend fun paginateBook(
             return 0
         }
 
+        var skipUntil = fromIndex
         for (index in fromIndex.coerceAtLeast(0) until toIndex.coerceAtMost(items.size)) {
+            if (index < skipUntil) continue
             if (previewReady()) return pages
             val item = items[index]
-            val itemFontSize = inlineWidths.fittedFontSize(item.publisherBoxes, spec.contentWidthPx)
-            val itemFontSizePx = itemFontSize.sp.toPx()
-            val itemInlineWidths = inlineWidths.atFontSize(itemFontSize)
             if (index % 32 == 0) yield()
 
             // Optionally start every chapter on a fresh page.
@@ -402,6 +408,19 @@ suspend fun paginateBook(
             ) {
                 closePage()
             }
+
+            if (cachedChapter != null && parts.isEmpty()) {
+                val cached = cachedChapter(index)
+                if (cached != null && cached.toIndex <= toIndex) {
+                    pages.addAll(cached.pages)
+                    skipUntil = cached.toIndex
+                    if (cached.pages.isNotEmpty()) onClosedPages?.invoke(pages)
+                    continue
+                }
+            }
+            val itemFontSize = inlineWidths.fittedFontSize(item.publisherBoxes, spec.contentWidthPx)
+            val itemFontSizePx = itemFontSize.sp.toPx()
+            val itemInlineWidths = inlineWidths.atFontSize(itemFontSize)
 
             // The semantic leaves remain addressable, but a supported CSS
             // float subtree is drawn inside its following paragraph.
@@ -548,7 +567,7 @@ suspend fun paginateBook(
 
                     if (element is ContentElement.Paragraph) {
                         val floatImage = element.block?.floatImage
-                        fun addFloatImageAsBlock() {
+                        suspend fun addFloatImageAsBlock() {
                             val image = floatImage ?: return
                             val aspect = imageAspectRatio(image.path) ?: 1.4f
                             val wantedHeight = min(
@@ -1023,7 +1042,8 @@ suspend fun paginateBook(
         }
     }
 
-    closePage()
+    closePage(checkpoint = false)
+    onRangeComplete?.invoke(pages)
     return pages
 }
 

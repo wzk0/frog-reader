@@ -42,6 +42,7 @@ import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.outlined.AutoStories
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.ViewAgenda
@@ -237,7 +238,7 @@ fun LibraryScreen(
     onDockVisible: (Boolean) -> Unit = {},
     onTabSwipeEnabled: (Boolean) -> Unit = {},
     dockScrollEnabled: Boolean = true,
-    onSearchBookSources: ((String) -> Unit)? = null,
+    onSearchOpds: ((String) -> Unit)? = null,
 ) {
     val entries by viewModel.entries.collectAsStateWithLifecycle()
     val books by viewModel.books.collectAsStateWithLifecycle()
@@ -264,6 +265,11 @@ fun LibraryScreen(
     val tileBounds = remember { LibraryTileBounds() }
     val pop = remember { ShelfPopState() }
     val selection = remember { LibrarySelection() }
+    var preparseBookId by rememberSaveable { mutableStateOf<String?>(null) }
+    val startPreparse: (Book) -> Unit = { book ->
+        viewModel.preparseBook(book)
+        preparseBookId = book.id
+    }
     var menuRequest by remember { mutableStateOf<MenuRequest?>(null) }
     var addToShelfFor by remember { mutableStateOf<AddToShelfRequest?>(null) }
     var shelfToDelete by remember { mutableStateOf<String?>(null) }
@@ -646,6 +652,7 @@ fun LibraryScreen(
                         heroCover = heroBook?.let { viewModel.coverFileFor(it) },
                         onOpenBook = onOpenBook,
                         onHeroDetails = { heroBook?.let(onBookInfo) },
+                        onHeroPreparse = { heroBook?.let(startPreparse) },
                         onHeroEdit = { heroBook?.let(onEditBook) },
                         // Through the same sheet as every other delete, so there is
                         // one "remove a book" object in the app rather than two.
@@ -694,7 +701,7 @@ fun LibraryScreen(
                     item(span = { GridItemSpan(maxLineSpan) }, key = "library_no_results") {
                         NoSearchResults(
                             modifier = Modifier.padding(top = 48.dp),
-                            onSearchSources = onSearchBookSources?.let { action -> { action(query.trim()) } },
+                            onSearchOpds = onSearchOpds?.let { action -> { action(query.trim()) } },
                         )
                     }
                 } else if (entries.isEmpty()) {
@@ -936,6 +943,7 @@ fun LibraryScreen(
                         entries.filterIsInstance<LibraryEntry.ShelfEntry>()
                             .firstOrNull { it.shelf.id == id }?.shelf
                     }
+                    val menuBook = (target as? MenuTarget.BookTarget)?.bookId?.let(bookOf)
                     LibraryItemMenu(
                         target = target,
                         shelfSortMode = menuShelf?.sortPreference ?: ShelfSortMode.FOLLOW_LIBRARY,
@@ -950,7 +958,13 @@ fun LibraryScreen(
                         },
                         isInReadingQueue = target is MenuTarget.BookTarget &&
                             readingQueue.any { it.attachment?.id == target.bookId },
-                        canEdit = (target as? MenuTarget.BookTarget)?.bookId?.let(bookOf)?.format?.supportsMetadataEditing == true,
+                        canEdit = menuBook?.format?.supportsMetadataEditing == true,
+                        onPreparse = menuBook?.takeIf { it.fileName != null }?.let { book ->
+                            {
+                                menuRequest = null
+                                startPreparse(book)
+                            }
+                        },
                         onSelect = {
                             val scope = when (target) {
                                 is MenuTarget.BookTarget -> target.shelfId
@@ -1019,6 +1033,17 @@ fun LibraryScreen(
                         onDismiss = { menuRequest = null },
                     )
                 }
+            }
+        }
+    }
+
+    preparseBookId?.let { id ->
+        val book = books.firstOrNull { it.id == id }
+        val fileName = book?.fileName
+        if (book != null && fileName != null) {
+            val preparations by viewModel.preparse.collectAsStateWithLifecycle()
+            preparations[id to fileName]?.let { state ->
+                BookPreparseDialog(book.title, state, onDismiss = { preparseBookId = null })
             }
         }
     }
@@ -1169,6 +1194,7 @@ private fun LibraryHeader(
     heroCover: java.io.File?,
     onOpenBook: (Book) -> Unit,
     onHeroDetails: () -> Unit,
+    onHeroPreparse: () -> Unit,
     onHeroEdit: () -> Unit,
     onHeroDelete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -1178,7 +1204,7 @@ private fun LibraryHeader(
         onQueryChange = onQueryChange,
         searchHint = stringResource(R.string.library_search_hint),
         onOpenSettings = onOpenSettings,
-        modifier = modifier.background(MaterialTheme.colorScheme.surface),
+        modifier = modifier,
     ) {
         if (heroBook != null) {
             HeroCard(
@@ -1186,6 +1212,7 @@ private fun LibraryHeader(
                 coverFile = heroCover,
                 onOpenBook = { onOpenBook(heroBook) },
                 onDetails = onHeroDetails,
+                onPreparse = onHeroPreparse,
                 onEdit = onHeroEdit,
                 onDelete = onHeroDelete,
             )
@@ -1202,6 +1229,7 @@ private fun HeroCard(
     coverFile: java.io.File?,
     onOpenBook: () -> Unit,
     onDetails: () -> Unit,
+    onPreparse: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
@@ -1349,6 +1377,9 @@ private fun HeroCard(
                             canEdit = book.format.supportsMetadataEditing,
                             onDismiss = { menuOpen = false },
                             onDetails = { menuOpen = false; onDetails() },
+                            onPreparse = if (book.fileName != null) {
+                                { menuOpen = false; onPreparse() }
+                            } else null,
                             onEdit = { menuOpen = false; onEdit() },
                             onDelete = { menuOpen = false; onDelete() },
                         )
@@ -1401,6 +1432,7 @@ private fun HeroMenu(
     canEdit: Boolean,
     onDismiss: () -> Unit,
     onDetails: () -> Unit,
+    onPreparse: (() -> Unit)?,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -1415,6 +1447,13 @@ private fun HeroMenu(
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             textColor = MaterialTheme.colorScheme.onSurface,
             onClick = onEdit,
+        )
+        if (onPreparse != null) HeroMenuItem(
+            icon = Icons.Outlined.AutoStories,
+            label = stringResource(R.string.library_menu_preparse),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            textColor = MaterialTheme.colorScheme.onSurface,
+            onClick = onPreparse,
         )
         HeroMenuItem(
             icon = Icons.Rounded.Info,
@@ -2362,7 +2401,7 @@ private fun EmptyLibrary(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun NoSearchResults(modifier: Modifier = Modifier, onSearchSources: (() -> Unit)? = null) {
+private fun NoSearchResults(modifier: Modifier = Modifier, onSearchOpds: (() -> Unit)? = null) {
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -2380,10 +2419,10 @@ private fun NoSearchResults(modifier: Modifier = Modifier, onSearchSources: (() 
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        if (onSearchSources != null) {
+        if (onSearchOpds != null) {
             Spacer(Modifier.height(14.dp))
-            OutlinedButton(onClick = onSearchSources) {
-                Text(stringResource(R.string.book_sources_search_from_library))
+            OutlinedButton(onClick = onSearchOpds) {
+                Text(stringResource(R.string.opds_search_from_library))
             }
         }
     }

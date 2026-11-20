@@ -5,7 +5,7 @@
     <!-- Unlocking the app. A normal permission: granted at install, never asked for. -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.CAMERA" />
-    <!-- Optional typeface downloads and online book sources. -->
+    <!-- Optional typeface downloads and OPDS catalogs. -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- Cover capture is optional; CAMERA permission must not imply required hardware. -->
     <uses-feature android:name="android.hardware.camera" android:required="false" />

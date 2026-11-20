@@ -1,9 +1,6 @@
 package com.example.frogreader.ui.library
 
 import com.example.frogreader.ui.components.rememberPredictiveBackMotion
-import androidx.compose.runtime.getValue
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -30,14 +27,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -81,17 +74,6 @@ fun ImportPreviewScreen(
     val haptics = LocalHapticFeedback.current
     val metadata = staged.metadata
 
-    // Decoding even a thumbnail is too much for a frame, so the glow arrives a
-    // moment late and fades in rather than popping.
-    val accent by produceState<Color?>(initialValue = null, staged.contentHash) {
-        value = staged.coverBytes?.let { CoverAccent.of(it) }
-    }
-    val glow by animateFloatAsState(
-        targetValue = if (accent != null) 1f else 0f,
-        animationSpec = tween(500),
-        label = "coverGlow",
-    )
-
     val backMotion = rememberPredictiveBackMotion(onBack = onCancel)
 
     Column(
@@ -99,22 +81,6 @@ fun ImportPreviewScreen(
             .fillMaxSize()
             .then(backMotion)
             .background(scheme.surface)
-            // The book's colour washing down the top of the page, not just a
-            // halo around the artwork. This is the part that makes the screen
-            // feel like it belongs to the book rather than to the app.
-            .drawBehind {
-                val colour = accent ?: return@drawBehind
-                drawRect(
-                    brush = Brush.verticalGradient(
-                        colors = listOf(
-                            colour.copy(alpha = 0.22f * glow),
-                            colour.copy(alpha = 0.05f * glow),
-                            Color.Transparent,
-                        ),
-                        endY = size.height * 0.62f,
-                    ),
-                )
-            }
             // Swallows taps so nothing behind the overlay can be reached.
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },

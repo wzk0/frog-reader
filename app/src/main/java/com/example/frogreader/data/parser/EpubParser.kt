@@ -264,6 +264,7 @@ object EpubParser {
         limits: ReaderResourceLimits,
         onPreview: ((BookContent) -> Unit)? = null,
         previewElementIndex: Int = 0,
+        onProgress: ((Float) -> Unit)? = null,
     ): BookContent {
         ZipFile(file).use { zip ->
             val budget = ArchiveResourceBudget(zip, limits)
@@ -395,18 +396,23 @@ object EpubParser {
                 )
             }
 
-            var previewPublished = false
+            var previewCheckpoint = 0
             var parsedLinearElements = 0L
-            val previewThreshold = previewElementIndex.coerceAtLeast(0).toLong() + 32L
+            val previewOffsets = longArrayOf(32L, 256L, 1024L)
+            val previewStart = previewElementIndex.coerceAtLeast(0).toLong()
             fun maybePublishPreview(addedElements: Int) {
-                if (onPreview == null || previewPublished) return
+                if (onPreview == null || previewCheckpoint == previewOffsets.size) return
                 parsedLinearElements += addedElements
-                if (parsedLinearElements < previewThreshold) return
-                previewPublished = true
+                if (parsedLinearElements < previewStart + previewOffsets[previewCheckpoint]) return
+                do {
+                    previewCheckpoint++
+                } while (previewCheckpoint < previewOffsets.size &&
+                    parsedLinearElements >= previewStart + previewOffsets[previewCheckpoint])
                 onPreview(contentSnapshot())
             }
 
-            for (spineItem in spine) {
+            for ((index, spineItem) in spine.withIndex()) {
+                onProgress?.invoke(index.toFloat() / spine.size)
                 val item = spineItem.item
                 val chapterPath = resolvePath(opfDir, item.href)
                 // Ignore only the non-linear duplicate; the actual linear

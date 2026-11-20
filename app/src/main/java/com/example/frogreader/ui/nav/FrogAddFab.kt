@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.example.frogreader.R
+import com.example.frogreader.ui.theme.LocalFrogColors
 
 /** The same mounted button contracts/expands as navigation changes its action. */
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -37,7 +38,7 @@ internal fun FrogAddFab(
     buttonSize: Dp = 56.dp,
     onClick: () -> Unit,
 ) {
-    val colors = MaterialTheme.colorScheme
+    val colors = LocalFrogColors.current
     val buttonShape = FloatingActionButtonDefaults.shape
     val endAnchor = TransformOrigin(if (LocalLayoutDirection.current == LayoutDirection.Ltr) 1f else 0f, 1f)
     val rotation by animateFloatAsState(if (menuExpanded) 45f else 0f, tween(150), label = "add icon rotation")
@@ -61,10 +62,10 @@ internal fun FrogAddFab(
             if (!expanded) { contentDescription = menuLabel; stateDescription = menuState }
         }),
         shape = buttonShape,
-        containerColor = colors.primaryContainer,
-        contentColor = colors.onPrimaryContainer,
+        containerColor = colors.dockAccent,
+        contentColor = colors.onDockAccent,
         icon = {
-            if (importing) LoadingIndicator(Modifier.size(24.dp), color = colors.onPrimaryContainer)
+            if (importing) LoadingIndicator(Modifier.size(24.dp), color = colors.onDockAccent)
             else Icon(Icons.Rounded.Add, null, Modifier.size(24.dp).graphicsLayer { rotationZ = rotation })
         },
         text = { Text(stringResource(R.string.reading_queue_add)) },

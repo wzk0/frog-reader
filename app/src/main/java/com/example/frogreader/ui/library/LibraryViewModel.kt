@@ -49,6 +49,12 @@ sealed interface LibraryMessage {
     data object ReadingQueueFailed : LibraryMessage
 }
 
+internal sealed interface BookPreparseState {
+    data class Running(val fraction: Float? = null) : BookPreparseState
+    data class Complete(val cached: Boolean) : BookPreparseState
+    data object Failed : BookPreparseState
+}
+
 class LibraryViewModel(
     private val repository: BookRepository,
     private val settingsRepository: SettingsRepository? = null,
@@ -58,6 +64,31 @@ class LibraryViewModel(
 
     val books: StateFlow<List<Book>> = repository.books
     val readingQueue = repository.readingQueue
+    private val _preparse = MutableStateFlow<Map<Pair<String, String>, BookPreparseState>>(emptyMap())
+    internal val preparse = _preparse.asStateFlow()
+
+    internal fun preparseBook(book: Book) {
+        val fileName = book.fileName ?: return
+        val key = book.id to fileName
+        if (_preparse.value[key] is BookPreparseState.Running) return
+        fun publish(state: BookPreparseState) {
+            _preparse.value = _preparse.value + (key to state)
+        }
+        // Keep active books available when the user dismisses their dialogs.
+        _preparse.value = _preparse.value.filterValues { it is BookPreparseState.Running }
+        publish(BookPreparseState.Running())
+        viewModelScope.launch {
+            try {
+                val cached = repository.preparseBook(book) { publish(BookPreparseState.Running(it)) }
+                publish(BookPreparseState.Complete(cached))
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                publish(BookPreparseState.Failed)
+            }
+        }
+    }
+
     private val _sortMode = MutableStateFlow(LibrarySortMode.RECENT)
 
     /**

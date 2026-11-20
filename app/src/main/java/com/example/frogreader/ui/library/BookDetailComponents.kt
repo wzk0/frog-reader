@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.library
 
+import com.example.frogreader.ui.components.frogTextFieldOutline
 import com.example.frogreader.ui.components.SpaceAfterHeading
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,9 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
@@ -54,16 +53,13 @@ internal fun BookDetailField(
     Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
         label?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant) }
         val fieldModifier = Modifier.fillMaxWidth().heightIn(min = 32.dp)
-            .drawBehind {
-                if (editing) {
-                    val stroke = if (focused || isError) 2.dp.toPx() else 1.dp.toPx()
-                    drawLine(lineColor, Offset(0f, size.height - stroke / 2), Offset(size.width, size.height - stroke / 2), stroke)
-                }
-            }.padding(vertical = 6.dp)
+        val editModifier = fieldModifier
+            .frogTextFieldOutline(lineColor, active = isError || focused)
+            .padding(horizontal = 14.dp, vertical = 8.dp)
         if (editing) {
             BasicTextField(
                 value = value, onValueChange = onChange, enabled = enabled,
-                modifier = fieldModifier.onFocusChanged { focused = it.isFocused }
+                modifier = editModifier.onFocusChanged { focused = it.isFocused }
                     .semantics { contentDescription = label ?: placeholder },
                 textStyle = textStyle.copy(color = textColor), cursorBrush = SolidColor(colors.primary),
                 minLines = minLines, maxLines = maxLines, singleLine = maxLines == 1,

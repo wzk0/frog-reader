@@ -14,6 +14,7 @@ import com.example.frogreader.ui.reader.BookPage
 import com.example.frogreader.ui.reader.PagePart
 import com.example.frogreader.ui.reader.PaginationCache
 import com.example.frogreader.ui.reader.ReaderItem
+import com.example.frogreader.ui.reader.ReaderReturnLocation
 import com.example.frogreader.ui.reader.ReaderViewModel
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
@@ -160,6 +161,64 @@ class ReaderOpeningPaginationTest {
         finish.complete(Unit)
         job.join()
         assertFalse(reader.pagination.value!!.partial)
+    }
+
+    @Test fun `directory destination replaces the opening preview before full pagination`() = runTest(dispatcher) {
+        val reader = model()
+        val destination = ReaderReturnLocation.Main(2)
+        val release = CompletableDeferred<Unit>()
+        val allPages = pages(0, 1, 2, 3)
+        reader.ensurePagination(
+            "layout", settings, items, quick = { pages(0) }, awaitPreviewPresentation = true,
+        ) {
+            release.await()
+            allPages
+        }
+        reader.pagination.first { it?.partial == true }
+
+        reader.prioritizePagination("layout", settings, destination) { pages(2, 3) }
+        val priority = reader.pagination.value!!
+        assertTrue(priority.partial)
+        assertEquals(destination, priority.priorityTarget)
+        assertEquals(2..3, priority.itemRange)
+
+        reader.onPaginationPresented(priority)
+        release.complete(Unit)
+        val complete = reader.pagination.first { it?.partial == false }!!
+        assertSame(allPages, complete.pages)
+        assertNull(complete.priorityTarget)
+    }
+
+    @Test fun `background batches extend the preview between gestures and stay immutable`() = runTest(dispatcher) {
+        val reader = model()
+        val ready = CompletableDeferred<Unit>()
+        val blocked = CompletableDeferred<Unit>()
+        val retry = CompletableDeferred<Unit>()
+        val finish = CompletableDeferred<Unit>()
+        reader.ensurePagination("layout", settings, items, quick = { pages(0) }, full = { publish ->
+            val closed = pages(0, 1).toMutableList()
+            ready.await()
+            publish(closed)
+            blocked.complete(Unit)
+            retry.await()
+            publish(closed)
+            closed += pages(2)
+            finish.await()
+            pages(0, 1, 2, 3)
+        })
+        val first = reader.pagination.first { it?.partial == true }!!
+        reader.onPaginationGesture(first, true)
+        ready.complete(Unit)
+        blocked.await()
+        assertSame(first, reader.pagination.value)
+        reader.onPaginationGesture(first, false)
+        retry.complete(Unit)
+
+        val expanded = reader.pagination.first { it?.pages?.size == 2 }!!
+        assertEquals(listOf(0, 1), expanded.pages.map { it.firstItemIndex })
+        finish.complete(Unit)
+        reader.pagination.first { it?.partial == false }
+        assertEquals(2, expanded.pages.size)
     }
 
     @Test fun `an empty quick result does not replace loading with an empty page holder`() = runTest(dispatcher) {

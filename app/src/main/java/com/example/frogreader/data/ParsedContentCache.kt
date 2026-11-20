@@ -59,6 +59,18 @@ internal class ParsedContentCache(
     fun load(bookId: String, sourceFile: File): Snapshot? =
         readSnapshot(entryFile(bookId), sourceFile, complete = true) ?: loadPreview(bookId, sourceFile)
 
+    /** Checks which source owns the atomically published file without decoding it again. */
+    fun hasCompleteSnapshot(bookId: String, sourceFile: File): Boolean = try {
+        val metadata = sourceMetadata(sourceFile)
+        DataInputStream(entryFile(bookId).inputStream().buffered()).use { input ->
+            val header = readHeader(input)
+            sourceFile.isFile && header.complete && header.path == metadata.path && header.length == metadata.length &&
+                header.modified == metadata.modified && header.digest.contentEquals(sha256(sourceFile))
+        }
+    } catch (_: IOException) {
+        false
+    }
+
     /** Returns null for stale, damaged, unsupported or evicted files. */
     private fun readSnapshot(file: File, sourceFile: File, complete: Boolean): Snapshot? {
         if (!file.isFile || file.length() !in 1..maxEntryBytes || !sourceFile.isFile) return null

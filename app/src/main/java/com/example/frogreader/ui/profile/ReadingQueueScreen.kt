@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.profile
 
+import com.example.frogreader.ui.components.FrogTextFieldShape
 import com.example.frogreader.ui.components.rememberPredictiveBackMotion
 import com.example.frogreader.ui.components.SpaceAfterHeading
 import com.example.frogreader.ui.components.cardSurface
@@ -17,8 +18,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.scrollBy
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
@@ -26,7 +25,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -46,7 +44,6 @@ import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -647,54 +644,24 @@ private fun ReadingQueueEditorField(
     keyboardOptions: KeyboardOptions = KeyboardOptions.Default,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
-    val colors = MaterialTheme.colorScheme
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    val accent = when {
-        !enabled -> colors.onSurfaceVariant
-        errorMessage != null -> colors.error
-        focused -> colors.primary
-        else -> colors.onSurfaceVariant
-    }
-    val shape = RoundedCornerShape(18.dp)
-    Column(Modifier.fillMaxWidth()) {
-        BasicTextField(value = value, onValueChange = onValueChange, enabled = enabled,
-            singleLine = singleLine, minLines = minLines, maxLines = maxLines,
-            textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface),
-            cursorBrush = SolidColor(if (errorMessage != null) colors.error else colors.primary),
-            interactionSource = interaction, keyboardOptions = keyboardOptions, keyboardActions = keyboardActions,
-            modifier = modifier.fillMaxWidth().semantics {
-                contentDescription = label
-                if (errorMessage != null) error(errorMessage)
-            },
-            decorationBox = { input ->
-                Row(Modifier.fillMaxWidth().heightIn(min = 56.dp)
-                    .background(colors.surfaceContainer, shape)
-                    .border(1.5.dp, if (enabled && (focused || errorMessage != null)) accent else colors.outlineVariant, shape)
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(icon, null, Modifier.size(24.dp), tint = accent)
-                    Column(Modifier.weight(1f)) {
-                        // Keep label, input and padding identical in every focus state. A floating
-                        // Material label can briefly change the height and move the sheet anchor.
-                        Text(label, Modifier.clearAndSetSemantics {},
-                            style = MaterialTheme.typography.bodySmall, color = accent)
-                        input()
-                    }
-                }
-            })
-        if (supportingText != null) {
-            ProvideTextStyle(MaterialTheme.typography.bodySmall) {
-                CompositionLocalProvider(LocalContentColor provides
-                    if (errorMessage != null) colors.error else colors.onSurfaceVariant) {
-                    Box(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 4.dp)) {
-                        supportingText()
-                    }
-                }
-            }
-        }
-    }
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = modifier.fillMaxWidth().semantics {
+            if (errorMessage != null) error(errorMessage)
+        },
+        enabled = enabled,
+        label = { Text(label) },
+        leadingIcon = { Icon(icon, contentDescription = null) },
+        supportingText = supportingText,
+        isError = errorMessage != null,
+        singleLine = singleLine,
+        minLines = minLines,
+        maxLines = maxLines,
+        shape = FrogTextFieldShape,
+        keyboardOptions = keyboardOptions,
+        keyboardActions = keyboardActions,
+    )
 }
 
 @Composable

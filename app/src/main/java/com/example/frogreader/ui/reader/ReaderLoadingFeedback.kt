@@ -83,6 +83,13 @@ internal fun ReaderLoadingNextPages(colors: ReaderColors, modifier: Modifier = M
         )
         Spacer(Modifier.height(8.dp))
         Text(
+            text = stringResource(R.string.reader_preparing_pages_preparse_hint),
+            style = MaterialTheme.typography.bodyMedium,
+            color = colors.secondaryText,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
             text = stringResource(R.string.reader_preparing_pages_continue),
             style = MaterialTheme.typography.bodyMedium,
             color = colors.secondaryText,

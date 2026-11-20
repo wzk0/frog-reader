@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.reader
 
+import com.example.frogreader.ui.components.FrogTextFieldShape
 import androidx.compose.foundation.background
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.focusable
@@ -26,8 +27,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -161,7 +162,7 @@ internal fun CompletionPage(
                 colors = colors,
             )
             Spacer(Modifier.height(16.dp))
-            TextField(
+            OutlinedTextField(
                 value = reviewState.draft.review,
                 onValueChange = onReviewChange,
                 enabled = !reviewState.saving,
@@ -172,11 +173,10 @@ internal fun CompletionPage(
                 modifier = Modifier.fillMaxWidth()
                     .bringIntoViewRequester(reviewBringIntoView)
                     .onFocusChanged { reviewFocused = it.isFocused },
-                shape = RoundedCornerShape(18.dp),
-                colors = TextFieldDefaults.colors(
-                    focusedContainerColor = colors.control,
-                    unfocusedContainerColor = colors.control,
-                    disabledContainerColor = colors.control,
+                shape = FrogTextFieldShape,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = colors.accent,
+                    unfocusedBorderColor = colors.onChromeVariant,
                     focusedTextColor = colors.text,
                     unfocusedTextColor = colors.text,
                     focusedLabelColor = colors.accent,
@@ -184,9 +184,6 @@ internal fun CompletionPage(
                     focusedPlaceholderColor = colors.secondaryText,
                     unfocusedPlaceholderColor = colors.secondaryText,
                     cursorColor = colors.accent,
-                    focusedIndicatorColor = Color.Transparent,
-                    unfocusedIndicatorColor = Color.Transparent,
-                    disabledIndicatorColor = Color.Transparent,
                 ),
             )
         }

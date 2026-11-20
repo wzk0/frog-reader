@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.library
 
+import com.example.frogreader.ui.components.frogTextFieldOutline
 import com.example.frogreader.ui.components.rememberPredictiveBackMotion
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -564,6 +565,8 @@ private fun ShelfNameField(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
+                    .frogTextFieldOutline(scheme.primary, active = true)
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
                     .focusRequester(focusRequester),
             )
         } else {

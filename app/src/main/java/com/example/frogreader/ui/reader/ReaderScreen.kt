@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.reader
 
+import com.example.frogreader.ui.components.frogTextFieldOutline
 import com.example.frogreader.ui.components.rememberPredictiveBackMotion
 import androidx.compose.runtime.setValue
 import com.example.frogreader.ui.components.FrogSnackbarHost
@@ -114,7 +115,6 @@ import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -206,6 +206,7 @@ import com.example.frogreader.ui.reader.selection.rememberTextFragment
 import com.example.frogreader.data.effectiveTheme
 import com.example.frogreader.ui.theme.isDark
 import com.example.frogreader.ui.theme.floatingSurface
+import java.util.concurrent.atomic.AtomicReference
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -2377,6 +2378,7 @@ private fun PagedReader(
     onContentReady: () -> Unit,
 ) {
     val measurer = rememberTextMeasurer(cacheSize = 0)
+    val destinationMeasurer = rememberTextMeasurer(cacheSize = 0)
     val liveBook by viewModel.book.collectAsStateWithLifecycle()
     val completionVisible by viewModel.completionVisible.collectAsStateWithLifecycle()
     val reviewState by viewModel.completionReview.collectAsStateWithLifecycle()
@@ -2387,10 +2389,16 @@ private fun PagedReader(
     var pendingForwardTurn by remember(ready.book.id, settings) {
         mutableStateOf<ReaderReturnLocation.Main?>(null)
     }
+    var pendingBackwardTurn by remember(ready.book.id, settings) {
+        mutableStateOf<ReaderReturnLocation.Main?>(null)
+    }
     val explicitSeek = seekTarget != null || seekFraction != null || seekPosition != null || seekCompletion
     val latestExplicitSeek by rememberUpdatedState(explicitSeek)
     LaunchedEffect(explicitSeek) {
-        if (explicitSeek) pendingForwardTurn = null
+        if (explicitSeek) {
+            pendingForwardTurn = null
+            pendingBackwardTurn = null
+        }
     }
     val paperCurl = settings.pageTurnAnimation == PageTurnAnimation.PAGE_CURL
     val cascade = settings.pageTurnAnimation == PageTurnAnimation.CASCADE
@@ -2437,6 +2445,13 @@ private fun PagedReader(
             )
         }
         val paginationKey = if (ready.contentComplete) spec.key else "${spec.key}|prefix=${ready.items.size}"
+        val destination = seekPosition ?: seekTarget?.let { ReaderReturnLocation.Main(it, Int.MAX_VALUE) }
+            ?: pendingBackwardTurn.takeUnless { explicitSeek }
+        val chapterPages = remember(paginationKey, ready) { AtomicReference<ReaderChapterPages?>() }
+        val cachedChapter: (Int) -> ReaderChapterPages? = { index ->
+            chapterPages.get()?.takeIf { it.fromIndex == index }
+        }
+        val latestDestination by rememberUpdatedState(destination)
         LaunchedEffect(paginationKey, ready) {
             val previewAnchor = ReaderReturnLocation.Main(
                 viewModel.currentFlatIndex, viewModel.currentCharOffset,
@@ -2458,8 +2473,43 @@ private fun PagedReader(
                 quickRange = quickRange.fromIndex until quickRange.toIndex,
                 awaitPreviewPresentation = true,
                 contentComplete = ready.contentComplete,
-            ) {
-                paginateBook(ready.items, measurer, spec)
+                pendingDestination = { latestDestination },
+            ) { publish ->
+                val start = quickRange.fromIndex
+                if (ready.contentComplete && start > 0 &&
+                    ready.items[start - 1].chapterIndex != ready.items[start].chapterIndex
+                ) {
+                    // Forced chapter breaks make this suffix independent of the earlier pages.
+                    val ahead = paginateBook(ready.items, measurer, spec, fromIndex = start, cachedChapter = cachedChapter, onClosedPages = publish)
+                    publish(ahead)
+                    val earlier = paginateBook(ready.items, measurer, spec, toIndex = start, cachedChapter = cachedChapter,
+                        onClosedPages = { publish(ahead) })
+                    earlier + ahead
+                } else {
+                    paginateBook(ready.items, measurer, spec, cachedChapter = cachedChapter, onClosedPages = publish)
+                }
+            }
+        }
+
+        LaunchedEffect(paginationKey, ready, destination) {
+            val target = destination ?: return@LaunchedEffect
+            if (!ready.contentComplete || !settings.startChaptersOnNewPage ||
+                target.flatItemIndex !in ready.items.indices
+            ) return@LaunchedEffect
+
+            // Forced chapter breaks let us lay out the destination without
+            // measuring all the text before it or restarting the full pass.
+            val chapter = ready.chapterAt(target.flatItemIndex)
+            val start = if (chapter == 0) 0 else ready.chapterStarts.getOrNull(chapter) ?: return@LaunchedEffect
+            val end = ready.chapterStarts.getOrNull(chapter + 1) ?: ready.items.size
+            viewModel.prioritizePagination(paginationKey, settings, target) {
+                cachedChapter(start)?.pages ?: paginateBook(
+                    ready.items, destinationMeasurer, spec,
+                    fromIndex = start, toIndex = end, stopAfterLocation = target,
+                    onRangeComplete = { pages ->
+                        chapterPages.set(ReaderChapterPages(start, end, pages))
+                    },
+                )
             }
         }
 
@@ -2501,7 +2551,11 @@ private fun PagedReader(
             val continuedPage = pendingTurn?.let { anchor ->
                 ReaderNavigationPolicy.pageForPreparedContinuation(pages, anchor, current.partial)
             }
+            val destinationPage = current.priorityTarget?.takeIf { it == destination }?.let {
+                ReaderNavigationPolicy.pageIndexForLocation(pages, it)
+            }
             val initialPage = when {
+                destinationPage != null -> destinationPage
                 continuedPage != null -> continuedPage
                 pendingTurn != null && current.partial -> realPageCount
                 else -> restoredPage
@@ -2524,6 +2578,14 @@ private fun PagedReader(
             // A swipe or a tap on the page edge is the user reading; a layout
             // that merely clamped is not. Only the former may move the stored
             // position away from the opening anchor.
+            LaunchedEffect(pagerState, curlTouch) {
+                try {
+                    snapshotFlow { pagerState.isScrollInProgress || curlTouch.gesture != null }
+                        .collect { viewModel.onPaginationGesture(current, it) }
+                } finally {
+                    viewModel.onPaginationGesture(current, false)
+                }
+            }
             LaunchedEffect(pagerState, curlTouch) {
                 snapshotFlow { pagerState.isScrollInProgress || curlTouch.pressed }
                     .collect { moving -> if (moving) viewModel.onUserMovedPosition() }
@@ -2592,6 +2654,12 @@ private fun PagedReader(
                     pendingForwardTurn = null
                 }
                 snapshotFlow { pagerState.settledPage }.collect { settled ->
+                    val queuedPrevious = pendingBackwardTurn
+                    if (settled > 0 && queuedPrevious != null && current.partial &&
+                        !paginationContainsLocation(pages, queuedPrevious)
+                    ) {
+                        pendingBackwardTurn = null
+                    }
                     viewModel.observeCompletionPosition(
                         lastPage = !current.partial && settled == realPageCount - 1,
                         completion = !current.partial && settled >= realPageCount,
@@ -2701,6 +2769,10 @@ private fun PagedReader(
                 curlTouch.reset(pagerState.currentPage)
                 livePagePosition.value = page.toFloat()
                 pagerState.scrollToPage(page)
+                if (current.priorityTarget != null) {
+                    val landed = pages[page]
+                    viewModel.observeVisiblePosition(landed.firstItemIndex, 0, landed.firstCharOffset)
+                }
                 onSeekConsumed()
             }
             LaunchedEffect(seekCompletion, current.partial) {
@@ -2749,7 +2821,7 @@ private fun PagedReader(
                 val page = ReaderNavigationPolicy.pageIndexForLocation(pages, position)
                     ?: return@LaunchedEffect
                 curlTouch.reset(pagerState.currentPage)
-                if (animateSeekPosition) {
+                if (animateSeekPosition && pagerState.currentPage != page) {
                     try {
                         pagerState.turnReaderPage(page, settings.pageTurnAnimation, readerChapterSwitchSpec())
                     } catch (cancelled: CancellationException) {
@@ -2760,19 +2832,42 @@ private fun PagedReader(
                     livePagePosition.value = page.toFloat()
                     pagerState.scrollToPage(page)
                 }
+                if (current.priorityTarget != null) {
+                    val landed = pages[page]
+                    viewModel.observeVisiblePosition(landed.firstItemIndex, 0, landed.firstCharOffset)
+                }
                 onSeekPositionConsumed(position)
             }
+            fun queuePreviousPage(): Boolean {
+                if (!current.partial || pagerState.currentPage != 0) return false
+                val previousIndex = pages.first().firstItemIndex - 1
+                if (previousIndex < 0) return false
+                pendingBackwardTurn = ReaderReturnLocation.Main(previousIndex, Int.MAX_VALUE)
+                return true
+            }
+
+            suspend fun turnAdjacentPage(delta: Int) {
+                curlTouch.reset(pagerState.currentPage)
+                if (delta < 0 && queuePreviousPage()) return
+                pendingBackwardTurn = null
+                pagerState.turnReaderPage(
+                    (pagerState.currentPage + delta).coerceIn(0, realPageCount + extraPages - 1),
+                    animation = settings.pageTurnAnimation,
+                    animationSpec = pageTurnSpec,
+                )
+            }
+
+            LaunchedEffect(pagerState, pendingBackwardTurn, explicitSeek) {
+                val target = pendingBackwardTurn.takeUnless { explicitSeek } ?: return@LaunchedEffect
+                if (current.partial && !paginationContainsLocation(pages, target)) return@LaunchedEffect
+                val page = ReaderNavigationPolicy.pageIndexForLocation(pages, target) ?: return@LaunchedEffect
+                pagerState.scrollToPage(page)
+                val landed = pages[page]
+                viewModel.observeVisiblePosition(landed.firstItemIndex, 0, landed.firstCharOffset)
+                pendingBackwardTurn = null
+            }
             LaunchedEffect(pagerState, pageTurnSpec) {
-                turnEvents.collect { forward ->
-                    curlTouch.reset(pagerState.currentPage)
-                    val delta = if (forward) 1 else -1
-                    pagerState.turnReaderPage(
-                        (pagerState.currentPage + delta)
-                            .coerceIn(0, realPageCount + extraPages - 1),
-                        animation = settings.pageTurnAnimation,
-                        animationSpec = pageTurnSpec,
-                    )
-                }
+                turnEvents.collect { forward -> turnAdjacentPage(if (forward) 1 else -1) }
             }
 
             // A selection drag held at the left or right edge turns pages.
@@ -2840,35 +2935,45 @@ private fun PagedReader(
                             .instantPageGestures(pagerState, ready.pageProgression == PageProgression.RTL)
                             .instantPageSemantics(pagerState, ready.pageProgression == PageProgression.RTL)
                     } else Modifier)
+                    .then(if (current.partial && pages.first().firstItemIndex > 0 && !selection.active) {
+                        Modifier.pointerInput(pagerState, ready.pageProgression) {
+                            // Observe the edge swipe after Pager and the custom turn handlers.
+                            // There is no real previous page here for those handlers to select.
+                            awaitEachGesture {
+                                val down = awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Final)
+                                if (pagerState.currentPage != 0) return@awaitEachGesture
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Final)
+                                    if (event.changes.any { it.id != down.id && it.pressed }) break
+                                    val pointer = event.changes.firstOrNull { it.id == down.id } ?: break
+                                    if (!pointer.pressed) {
+                                        val travel = pointer.position - down.position
+                                        val rtl = ready.pageProgression == PageProgression.RTL
+                                        if (abs(travel.x) > abs(travel.y) && instantPageSwipeDelta(
+                                                travel.x / size.width.coerceAtLeast(1), 0f, rtl,
+                                            ) < 0
+                                        ) queuePreviousPage()
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                    } else Modifier)
                     .readerGestures(
                         enabled = !completionVisible,
-                        tapGestureKey = pageTurnSpec,
+                        tapGestureKey = pageTurnSpec to settings.reversePageTap,
                         onTapLeft = {
                             scope.launch {
-                                val delta = ReaderProgression.horizontalTapDelta(
-                                    leftEdge = true,
-                                    progression = ready.pageProgression,
-                                )
-                                pagerState.turnReaderPage(
-                                    (pagerState.currentPage + delta)
-                                        .coerceIn(0, realPageCount + extraPages - 1),
-                                    animation = settings.pageTurnAnimation,
-                                    animationSpec = pageTurnSpec,
-                                )
+                                turnAdjacentPage(ReaderProgression.horizontalTapDelta(
+                                    leftEdge = !settings.reversePageTap, progression = ready.pageProgression,
+                                ))
                             }
                         },
                         onTapRight = {
                             scope.launch {
-                                val delta = ReaderProgression.horizontalTapDelta(
-                                    leftEdge = false,
-                                    progression = ready.pageProgression,
-                                )
-                                pagerState.turnReaderPage(
-                                    (pagerState.currentPage + delta)
-                                        .coerceIn(0, realPageCount + extraPages - 1),
-                                    animation = settings.pageTurnAnimation,
-                                    animationSpec = pageTurnSpec,
-                                )
+                                turnAdjacentPage(ReaderProgression.horizontalTapDelta(
+                                    leftEdge = settings.reversePageTap, progression = ready.pageProgression,
+                                ))
                             }
                         },
                         onTapCenter = onToggleChrome,
@@ -3002,7 +3107,10 @@ private fun PagedReader(
         }
 
         // Subtle corner hint while pages are being recomputed for new settings.
-        if (rememberDelayedReaderLoading(recomputing && current.key != paginationKey)) {
+        val waitingForPrevious = pendingBackwardTurn?.let {
+            current.partial && !paginationContainsLocation(current.pages, it)
+        } == true
+        if (rememberDelayedReaderLoading(waitingForPrevious || recomputing && current.key != paginationKey)) {
             LoadingIndicator(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
@@ -3983,16 +4091,8 @@ private fun ReaderTopBar(
                         )
                         Box(
                             Modifier.weight(1f).padding(horizontal = 12.dp)
-                                .drawBehind {
-                                    val line = 1.dp.toPx()
-                                    drawLine(
-                                        color = colors.accent,
-                                        start = Offset(0f, size.height - line / 2),
-                                        end = Offset(size.width, size.height - line / 2),
-                                        strokeWidth = line,
-                                    )
-                                }
-                                .padding(vertical = 5.dp),
+                                .frogTextFieldOutline(colors.accent, active = true)
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
                             contentAlignment = Alignment.CenterStart,
                         ) {
                             if (searchQuery.isEmpty()) {
@@ -4341,6 +4441,7 @@ private fun ReaderBottomBar(
                                             colors = colors,
                                             modifier = Modifier.weight(1f),
                                             publisherStyle = ready.publisherStyle,
+                                            defaults = ReaderSettings.defaultFor(ready.book.format),
                                             brightness = brightness,
                                             pageCounterInfo = pageCounterInfo,
                                             onUpdate = onUpdate,

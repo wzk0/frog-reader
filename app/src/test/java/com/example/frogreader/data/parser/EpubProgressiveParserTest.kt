@@ -135,6 +135,21 @@ class EpubProgressiveParserTest {
     }
 
     @Test
+    fun `long books publish bounded checkpoints as the spine advances`() {
+        val file = epub(
+            "checkpoint.epub",
+            (0 until 18).map { Doc(if (it == 0) "main.xhtml" else "part$it.xhtml", paragraphs(64, "Part $it")) },
+        )
+        val snapshots = mutableListOf<BookContent>()
+        val final = EpubParser.parseContent(file, temp.newFolder(), ReaderResourceLimits.DEFAULT, onPreview = snapshots::add)
+        assertEquals(listOf(64, 256, 1024), snapshots.map { it.totalElements })
+        val full = final.chapters.flatMap { it.elements }
+        snapshots.forEach { snapshot ->
+            assertEquals(full.take(snapshot.totalElements), snapshot.chapters.flatMap { it.elements })
+        }
+    }
+
+    @Test
     fun `unreachable saved element cannot overflow into a premature preview`() {
         val file = epub("far-position.epub", listOf(Doc("main.xhtml", paragraphs(40, "Small"))))
         val previews = mutableListOf<BookContent>()

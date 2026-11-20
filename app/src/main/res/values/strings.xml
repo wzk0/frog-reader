@@ -4,7 +4,7 @@
 
     <!-- Library screen -->
     <string name="library_empty_title">还没有书</string>
-    <string name="library_empty_subtitle">添加你的第一本 EPUB、FB2、MOBI、TXT 或 Markdown 书，它会出现在这里。</string>
+    <string name="library_empty_subtitle">添加 EPUB、FB2、MOBI、TXT 或 Markdown 图书，开始阅读。</string>
     <!-- The two choices that rise above the plus button -->
     <string name="fab_menu_open">添加书籍</string>
     <string name="fab_menu_expanded">已展开</string>
@@ -12,7 +12,7 @@
     <string name="fab_add_book">添加一本书</string>
     <string name="fab_scan_folder">扫描文件夹</string>
     <string name="library_imported">“%1$s”已加入书库</string>
-    <string name="library_import_failed">无法添加这本书。文件可能已损坏，或者不是 EPUB、FB2、MOBI、TXT、Markdown 文件。</string>
+    <string name="library_import_failed">无法添加图书。请检查文件是否损坏，或确认格式是否受支持。</string>
     <string name="library_import_failed_drm">这本书有版权保护（DRM），无法打开。</string>
     <string name="library_replaced">“%1$s”已替换</string>
     <string name="library_import_cancelled">没有添加任何内容</string>
@@ -70,6 +70,14 @@
     <string name="library_status_reading">在读</string>
     <string name="library_status_not_started">未开始</string>
     <string name="library_menu_info">信息</string>
+    <string name="library_menu_preparse">预解析</string>
+    <string name="library_preparse_running">正在预解析全书…</string>
+    <string name="library_preparse_percentage">已解析 %1$d%%</string>
+    <string name="library_preparse_caching">正文解析完成，正在准备缓存…</string>
+    <string name="library_preparse_complete">全书预解析完成</string>
+    <string name="library_preparse_memory_only">正文已解析，未能保存完整缓存。重新打开时可能需要再次解析。</string>
+    <string name="library_preparse_failed">预解析失败，请检查书籍文件后重试</string>
+    <string name="library_preparse_background">后台继续</string>
 
     <!-- Long-press menu, shared by books and shelves -->
     <string name="library_menu_select">选择</string>
@@ -135,6 +143,7 @@
     <string name="reader_error_title">无法打开这本书</string>
     <string name="reader_preparing_destination">正在准备跳转位置…</string>
     <string name="reader_preparing_pages">正在准备接下来的页面…</string>
+    <string name="reader_preparing_pages_preparse_hint">可在首页长按书籍进行预解析处理</string>
     <string name="reader_preparing_pages_continue">阅读将在此处自动继续。</string>
     <string name="reader_loading_chapters">正在加载章节…</string>
     <string name="reader_search_loading_book">正在随书籍加载进行搜索…</string>
@@ -246,7 +255,7 @@
     <string name="reader_track_book">书籍</string>
     <string name="reader_brightness">亮度</string>
     <string name="reader_brightness_auto">自动</string>
-    <string name="reader_font_size_pt">%1$d pt</string>
+    <string name="reader_font_size_pt">%1$d sp</string>
     <string name="reader_section_page_anim">翻页动画</string>
     <string name="reader_font_custom">自定义</string>
     <string name="reader_fonts_title">自定义字体</string>
@@ -306,7 +315,7 @@
     <string name="backup_failed">备份失败：%1$s</string>
     <string name="backup_restore_failed">无法恢复：%1$s</string>
     <string name="backup_folder_none">未选择</string>
-    <string name="backup_folder_hint">选择 Google Drive 或 Dropbox 中的文件夹，备份就会保存到云端。</string>
+    <string name="backup_folder_hint">可选择本机文件夹，或使用系统文件选择器提供的云端位置。</string>
     <string name="backup_schedule_off">关闭</string>
     <string name="backup_schedule_daily">每天</string>
     <string name="backup_schedule_weekly">每周</string>
@@ -379,9 +388,9 @@
     <string name="settings_about_view_third_party">查看第三方声明</string>
     <string name="settings_about_license_app">青蛙阅读（GPLv3）</string>
     <string name="settings_about_license_third_party">第三方声明</string>
-    <string name="settings_about_license_notice">原版版权所有 © 2026 KNITIPKA；本中文分支同样以 GPL-3.0-only 发布。青蛙阅读 是自由软件：你可以依据 GNU 通用公共许可证第 3 版（GPL-3.0-only）重新发布和修改它。它完全不提供任何担保。完整许可如下；本分支的源代码见 GitHub 仓库。</string>
+    <string name="settings_about_license_notice">原版版权所有 © 2026 KNITIPKA；本中文分支同样以 GPL-3.0-only 发布。青蛙阅读是自由软件：你可以依据 GNU 通用公共许可证第 3 版（GPL-3.0-only）重新发布和修改它。它完全不提供任何担保。完整许可如下；本分支的源代码见 GitHub 仓库。</string>
     <string name="settings_about_license_failed">无法加载许可文本。完整许可可在 GitHub 仓库中查看。</string>
-    <string name="settings_about_intro">私密、离线阅读，无需账号。中文分支由 wzk0 维护，在上游 FrogReader 的基础上增加了完整汉化、文件夹书架、按文件夹/文件名排序与在线字体下载。</string>
+    <string name="settings_about_intro">本地图书支持离线阅读，无需账号。青蛙阅读是由 wzk0 维护的 FrogReader 简体中文分支，支持文件夹书架、OPDS 目录和中文字体下载。</string>
     <string name="settings_about_support">支持</string>
     <string name="settings_about_issues">反馈问题</string>
     <string name="settings_about_issues_subtitle">在本仓库报告问题</string>
@@ -417,7 +426,7 @@
     <string name="settings_light_theme_default_subtitle">系统不是深色时使用</string>
     <string name="settings_dynamic_color">Material You 取色</string>
     <string name="settings_dynamic_color_subtitle">适用于明亮与午夜主题；米色始终保持米色</string>
-    <string name="settings_theme_helper_dynamic">Material You 会在整个应用中为明亮与午夜主题重新取色。米色始终保持其暖色配色；阅读页面保留其选定的颜色。</string>
+    <string name="settings_theme_helper_dynamic">使用系统配色更新明亮和午夜主题。米色主题与阅读页面使用各自的配色。</string>
     <string name="settings_theme_helper_system">阅读页面保留自己的页面颜色——午夜只接管书库与应用界面。</string>
     <string name="settings_theme_helper_manual">关闭系统切换后，所选主题昼夜不变。</string>
 
@@ -544,7 +553,7 @@
     <string name="scan_state_failed">无法读取此文件</string>
     <string name="scan_retry">重试</string>
     <string name="scan_empty">此文件夹中没有书</string>
-    <string name="scan_empty_hint">青蛙阅读 会查找 EPUB、FB2、MOBI、TXT 和 Markdown 文件，包括子文件夹中的。</string>
+    <string name="scan_empty_hint">会在所选文件夹及其子文件夹中查找 EPUB、FB2、MOBI、TXT 和 Markdown 图书。</string>
     <string name="scan_empty_search">没有匹配的书</string>
     <string name="scan_access_lost">已失去对此文件夹的访问权限</string>
     <string name="scan_access_lost_hint">请重新选择以继续。</string>
@@ -578,7 +587,7 @@
     <string name="metadata_series_number">系列序号</string>
     <string name="metadata_series_hint">可选；请先填写系列名称。允许 1.5 这样的小数。</string>
     <string name="metadata_year_hint">请输入四位年份。</string>
-    <string name="metadata_mobi_hint">MOBI / AZW3 将系列和译者保存在内嵌扩展中。青蛙阅读 会读取这些字段，其他阅读器可能不显示。</string>
+    <string name="metadata_mobi_hint">MOBI / AZW3 将系列和译者保存在内嵌扩展中。青蛙阅读会读取这些字段，其他阅读器可能不显示。</string>
     <string name="metadata_save_file">保存到书籍</string>
     <string name="metadata_saving">正在处理…</string>
     <string name="metadata_saved">已保存到书籍文件</string>

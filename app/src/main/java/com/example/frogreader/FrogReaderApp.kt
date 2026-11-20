@@ -22,7 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class FrogReaderApp : Application(), SingletonImageLoader.Factory {
-    internal val bookSources by lazy { com.example.frogreader.data.BookSourceStore(filesDir) }
+    internal val opdsCatalogs by lazy { com.example.frogreader.data.OpdsCatalogStore(filesDir) }
     val bookRepository: BookRepository by lazy { BookRepository(this) }
     val settingsRepository: SettingsRepository by lazy { SettingsRepository(this) }
     val statsRepository: StatsRepository by lazy { StatsRepository(this) }

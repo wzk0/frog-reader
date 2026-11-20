@@ -203,6 +203,9 @@ data class FrogExtraColors(
     val lift: Color,
     /** The floating nav bar pill. */
     val nav: Color,
+    /** Matched accent for the selected dock tab and its floating action button. */
+    val dockAccent: Color,
+    val onDockAccent: Color,
     /** Shelf background, and the progress fill of a list row. */
     val folder: Color,
     /** Soft gold background reserved for completed books in the library list. */
@@ -238,6 +241,8 @@ private val LightExtraColors by lazy {
         pill60 = scheme.surfaceContainerLowest.copy(alpha = 0.78f),
         lift = scheme.surface.copy(alpha = 0.82f),
         nav = scheme.surfaceContainerLowest,
+        dockAccent = scheme.primaryContainer,
+        onDockAccent = scheme.onPrimaryContainer,
         folder = scheme.primary.copy(alpha = 0.08f),
         completionFill = LightCompletionFill,
         completionInk = LightCompletionInk,
@@ -274,6 +279,8 @@ private val BeigeExtraColors by lazy {
         pill60 = scheme.surfaceContainerLowest.copy(alpha = 0.78f),
         lift = scheme.surface.copy(alpha = 0.82f),
         nav = scheme.surfaceContainerLowest,
+        dockAccent = scheme.primary,
+        onDockAccent = scheme.onPrimary,
         folder = scheme.primary.copy(alpha = 0.09f),
         completionFill = LightCompletionFill,
         completionInk = LightCompletionInk,
@@ -299,35 +306,40 @@ private val BeigeExtraColors by lazy {
     )
 }
 
-private val MidnightExtraColors = FrogExtraColors(
-    headerTop = Color(0xFF131A14),
-    headerBottom = Color(0xFF000000),
-    glass = Color.White.copy(alpha = 0.08f),
-    chip = Color(0xFF191D19),
-    pill = Color(0xFF191D19).copy(alpha = 0.94f),
-    pill60 = Color(0xFF191D19).copy(alpha = 0.60f),
-    lift = Color(0xFF1E241E).copy(alpha = 0.84f),
-    nav = Color(0xFF101410),
-    folder = Color(0xFF7BD69B).copy(alpha = 0.14f),
-    completionFill = DarkCompletionFill,
-    completionInk = DarkCompletionInk,
-    ink = Color(0xFFE8EDE7),
-    ink2 = Color(0xFFB9C2B8),
-    profileTop = Color(0xFF10171D),
-    profileBottom = Color(0xFF070B0E),
-    onProfile = Color(0xFFF0F3F3),
-    profileLandscape = ProfileLandscapeColors(
-        style = ProfileLandscapeStyle.NIGHT,
-        distant = Color(0xFF293037),
-        middle = Color(0xFF1D242A),
-        foreground = Color(0xFF0B1015),
-        detail = Color(0xFF444A4D),
-        celestial = Color(0xFFE5CCA2),
-        action = Color(0xFF24282B).copy(alpha = 0.92f),
-        onAction = Color(0xFFF0F3F3),
-        actionBorder = Color(0xFF62686C).copy(alpha = 0.36f),
-    ),
-)
+private val MidnightExtraColors by lazy {
+    val scheme = MidnightColorScheme
+    FrogExtraColors(
+        headerTop = Color(0xFF131A14),
+        headerBottom = Color(0xFF000000),
+        glass = Color.White.copy(alpha = 0.08f),
+        chip = Color(0xFF191D19),
+        pill = Color(0xFF191D19).copy(alpha = 0.94f),
+        pill60 = Color(0xFF191D19).copy(alpha = 0.60f),
+        lift = Color(0xFF1E241E).copy(alpha = 0.84f),
+        nav = Color(0xFF101410),
+        dockAccent = scheme.primaryContainer,
+        onDockAccent = scheme.onPrimaryContainer,
+        folder = Color(0xFF7BD69B).copy(alpha = 0.14f),
+        completionFill = DarkCompletionFill,
+        completionInk = DarkCompletionInk,
+        ink = Color(0xFFE8EDE7),
+        ink2 = Color(0xFFB9C2B8),
+        profileTop = Color(0xFF10171D),
+        profileBottom = Color(0xFF070B0E),
+        onProfile = Color(0xFFF0F3F3),
+        profileLandscape = ProfileLandscapeColors(
+            style = ProfileLandscapeStyle.NIGHT,
+            distant = Color(0xFF293037),
+            middle = Color(0xFF1D242A),
+            foreground = Color(0xFF0B1015),
+            detail = Color(0xFF444A4D),
+            celestial = Color(0xFFE5CCA2),
+            action = Color(0xFF24282B).copy(alpha = 0.92f),
+            onAction = Color(0xFFF0F3F3),
+            actionBorder = Color(0xFF62686C).copy(alpha = 0.36f),
+        ),
+    )
+}
 
 val LocalFrogColors = staticCompositionLocalOf { LightExtraColors }
 
@@ -372,6 +384,8 @@ internal fun dynamicFrogColors(scheme: ColorScheme, dark: Boolean): FrogExtraCol
         pill60 = raisedSurface.copy(alpha = 0.62f),
         lift = scheme.surfaceContainerHigh.copy(alpha = 0.84f),
         nav = if (dark) scheme.surfaceContainerHigh else scheme.surfaceContainerLowest,
+        dockAccent = scheme.primaryContainer,
+        onDockAccent = scheme.onPrimaryContainer,
         folder = scheme.primary.copy(alpha = if (dark) 0.20f else 0.08f),
         completionFill = if (dark) DarkCompletionFill else LightCompletionFill,
         completionInk = if (dark) DarkCompletionInk else LightCompletionInk,

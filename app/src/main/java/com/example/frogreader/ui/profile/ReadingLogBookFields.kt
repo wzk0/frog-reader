@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.profile
 
+import com.example.frogreader.ui.components.FrogTextFieldShape
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -15,7 +16,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -50,27 +50,17 @@ internal fun ReadingLogBookFields(
     val authorFocus = remember { FocusRequester() }
     var coverMenu by remember { mutableStateOf(false) }
     val coverAction = stringResource(if (cover == null) R.string.metadata_add_cover else R.string.edit_change_cover)
-    val fieldColors = TextFieldDefaults.colors(
-        focusedContainerColor = colors.surfaceContainer,
-        unfocusedContainerColor = colors.surfaceContainer,
-        disabledContainerColor = colors.surfaceContainer,
-        focusedIndicatorColor = Color.Transparent,
-        unfocusedIndicatorColor = Color.Transparent,
-        disabledIndicatorColor = Color.Transparent,
-        errorIndicatorColor = Color.Transparent,
-    )
-
     val fields: @Composable ColumnScope.() -> Unit = {
-        TextField(title, onTitleChange, Modifier.fillMaxWidth(), enabled = enabled,
+        OutlinedTextField(title, onTitleChange, Modifier.fillMaxWidth(), enabled = enabled,
             label = { Text(stringResource(R.string.edit_field_title)) }, singleLine = true,
             isError = titleIsError,
             supportingText = if (titleIsError) { { Text(stringResource(R.string.metadata_title_required)) } } else null,
-            shape = RoundedCornerShape(12.dp), colors = fieldColors,
+            shape = FrogTextFieldShape,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Next),
             keyboardActions = KeyboardActions(onNext = { authorFocus.requestFocus() }))
-        TextField(author, onAuthorChange, Modifier.fillMaxWidth().focusRequester(authorFocus), enabled = enabled,
+        OutlinedTextField(author, onAuthorChange, Modifier.fillMaxWidth().focusRequester(authorFocus), enabled = enabled,
             label = { Text(stringResource(R.string.reading_queue_author)) }, singleLine = true,
-            shape = RoundedCornerShape(12.dp), colors = fieldColors,
+            shape = FrogTextFieldShape,
             keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { focus.clearFocus(); keyboard?.hide() }))
     }

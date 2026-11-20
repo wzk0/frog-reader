@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.profile
 
+import com.example.frogreader.ui.components.FrogTextFieldShape
 import com.example.frogreader.ui.components.FrogSnackbarHost
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -16,7 +17,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
@@ -148,11 +148,8 @@ internal fun ReadingLogField(value: String, change: (String) -> Unit, label: Str
     singleLine: Boolean = true, minLines: Int = 1, maxLines: Int = 1, supportingText: @Composable (() -> Unit)? = null,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
 ) {
-    TextField(value, change, modifier.fillMaxWidth(), enabled = !busy, label = { Text(label) }, singleLine = singleLine,
-        minLines = minLines, maxLines = maxLines, supportingText = supportingText, shape = RoundedCornerShape(18.dp),
+    OutlinedTextField(value, change, modifier.fillMaxWidth(), enabled = !busy, label = { Text(label) }, singleLine = singleLine,
+        minLines = minLines, maxLines = maxLines, supportingText = supportingText, shape = FrogTextFieldShape,
         keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = if (singleLine) ImeAction.Next else ImeAction.Default),
-        keyboardActions = keyboardActions, colors = TextFieldDefaults.colors(
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainer, unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            disabledContainerColor = MaterialTheme.colorScheme.surfaceContainer,
-            focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent, disabledIndicatorColor = Color.Transparent))
+        keyboardActions = keyboardActions)
 }

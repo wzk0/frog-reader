@@ -54,7 +54,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -147,7 +146,7 @@ fun ScanFolderScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(bottomStart = 36.dp, bottomEnd = 36.dp))
-                    .background(Brush.verticalGradient(listOf(frog.headerTop, frog.headerBottom)))
+                    .background(scheme.surface)
                     // Same inset the library header takes, and for the same
                     // reason: measured whether or not the bar is on screen.
                     .padding(WindowInsets.statusBarsIgnoringVisibility.asPaddingValues())

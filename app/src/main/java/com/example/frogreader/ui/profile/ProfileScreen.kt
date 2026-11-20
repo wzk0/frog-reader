@@ -190,7 +190,7 @@ internal fun ProfileDashboard(
     var nameEditorBounds by remember { mutableStateOf<Rect?>(null) }
     var dashboardPosition by remember { mutableStateOf(Offset.Zero) }
     BoxWithConstraints(
-        modifier = Modifier.fillMaxSize().padding(contentPadding)
+        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)
             .onGloballyPositioned { dashboardPosition = it.positionInRoot() }
             .pointerInput(focusManager, keyboard) {
                 awaitEachGesture {
@@ -207,12 +207,13 @@ internal fun ProfileDashboard(
     ) {
         val systemPadding = WindowInsets.systemBarsIgnoringVisibility
             .only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal).asPaddingValues()
-        val compact = maxHeight - systemPadding.calculateTopPadding() < 760.dp
+        val compact = maxHeight - systemPadding.calculateTopPadding() - contentPadding.calculateBottomPadding() < 760.dp
         FillRemainingColumn(
             modifier = Modifier.fillMaxSize()
                 // Normally all cards fit. Preserve access with large accessibility
                 // fonts, a landscape window, or the keyboard rather than clipping.
-                .verticalScroll(rememberScrollState()),
+                .verticalScroll(rememberScrollState())
+                .padding(contentPadding),
         ) {
             FrogHeaderContent(
                 query = "",

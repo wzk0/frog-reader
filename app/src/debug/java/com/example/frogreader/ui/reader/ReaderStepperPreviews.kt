@@ -43,7 +43,7 @@ private fun ReaderSteppersLargeTextPreview() = SteppersPreview(AppTheme.SEPIA)
 @Composable
 private fun ReaderSteppersBoundsPreview() = SteppersPreview(AppTheme.OLED, bounds = true)
 
-/** Interactive memory-only panel, including all six repeatable buttons. */
+/** Interactive memory-only panel, including the typography controls. */
 @Composable
 private fun SteppersPreview(theme: AppTheme, dynamic: Boolean = false, bounds: Boolean = false) {
     var settings by remember {
@@ -51,6 +51,9 @@ private fun SteppersPreview(theme: AppTheme, dynamic: Boolean = false, bounds: B
             readingMode = ReadingMode.PAGES,
             lineHeight = if (bounds) 1.2f else 1.5f,
             fontSizeSp = if (bounds) 32f else 18f,
+            fontWeight = if (bounds) 900 else 500,
+            letterSpacingPercent = if (bounds) 20 else 2,
+            reversePageTap = bounds,
             pageMarginDp = if (bounds) ReaderSettings.MIN_SIDE_MARGIN_DP else 34,
         ))
     }

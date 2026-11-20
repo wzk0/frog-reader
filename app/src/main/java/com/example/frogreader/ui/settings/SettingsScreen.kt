@@ -60,7 +60,7 @@ private enum class SettingsDestination {
     ROOT,
     THEME,
     READING,
-    BOOK_SOURCES,
+    OPDS,
     PRIVACY,
     BACKUP,
 }
@@ -90,7 +90,7 @@ fun SettingsScreen(
                     onBack = onBack,
                     onOpenTheme = { navController.navigate(SettingsDestination.THEME.name) { launchSingleTop = true } },
                     onOpenReading = { navController.navigate(SettingsDestination.READING.name) { launchSingleTop = true } },
-                    onOpenBookSources = { navController.navigate(SettingsDestination.BOOK_SOURCES.name) { launchSingleTop = true } },
+                    onOpenOpds = { navController.navigate(SettingsDestination.OPDS.name) { launchSingleTop = true } },
                     onOpenPrivacy = { navController.navigate(SettingsDestination.PRIVACY.name) { launchSingleTop = true } },
                     onOpenBackup = { navController.navigate(SettingsDestination.BACKUP.name) { launchSingleTop = true } },
                     onOpenAbout = { showAbout = true },
@@ -117,8 +117,8 @@ fun SettingsScreen(
                 )
             }
 
-            composable(SettingsDestination.BOOK_SOURCES.name) {
-                BookSourcesSettingsPage { navController.popBackStack() }
+            composable(SettingsDestination.OPDS.name) {
+                OpdsSettingsPage { navController.popBackStack() }
             }
 
             composable(SettingsDestination.PRIVACY.name) {
@@ -170,7 +170,7 @@ internal fun SettingsEntryPage(
     onOpenPrivacy: () -> Unit,
     onOpenBackup: () -> Unit,
     onOpenAbout: () -> Unit,
-    onOpenBookSources: () -> Unit = {},
+    onOpenOpds: () -> Unit = {},
 ) {
     val systemDark = isSystemInDarkTheme()
     val effectiveTheme = settings.effectiveTheme(systemDark)
@@ -210,9 +210,9 @@ internal fun SettingsEntryPage(
             SettingsNavigationRow(
                 modifier = Modifier.connectedCard(scheme, connectedCardShape(first = false)),
                 icon = Icons.Outlined.Language,
-                title = stringResource(R.string.book_sources_title),
-                subtitle = stringResource(R.string.book_sources_summary),
-                onClick = onOpenBookSources,
+                title = stringResource(R.string.opds_title),
+                subtitle = stringResource(R.string.opds_summary),
+                onClick = onOpenOpds,
             )
         }
 

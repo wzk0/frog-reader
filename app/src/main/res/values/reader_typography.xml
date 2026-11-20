@@ -1,0 +1,10 @@
+<resources>
+    <string name="reader_font_weight">字重</string>
+    <string name="reader_letter_spacing">字间距</string>
+    <string name="reader_letter_spacing_value">%1$d%%</string>
+    <string name="reader_decrease_typography">减小%1$s</string>
+    <string name="reader_increase_typography">增大%1$s</string>
+    <string name="reader_reverse_page_tap">反向翻页</string>
+    <string name="reader_reverse_page_tap_hint">交换左右点按区域，左侧向右翻页</string>
+    <string name="reader_reset_typography">恢复默认%1$s</string>
+</resources>

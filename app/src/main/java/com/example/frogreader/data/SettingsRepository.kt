@@ -136,6 +136,9 @@ data class ReaderSettings(
     val dropCaps: Boolean = true,
     /** Chosen page-turn animation in paged mode. */
     val pageTurnAnimation: PageTurnAnimation = PageTurnAnimation.CASCADE,
+    val fontWeight: Int = 400,
+    val letterSpacingPercent: Int = 0,
+    val reversePageTap: Boolean = false,
 ) {
     /** Retire hidden manual controls without changing selected fonts or publisher CSS. */
     fun withAutomaticTypography(): ReaderSettings =
@@ -306,6 +309,9 @@ class SettingsRepository(private val context: Context) {
         val invertImages = booleanPreferencesKey("invert_images")
         val dropCaps = booleanPreferencesKey("drop_caps")
         val pageTurnAnimation = stringPreferencesKey("page_turn_animation")
+        val fontWeight = intPreferencesKey("reader_font_weight")
+        val letterSpacingPercent = intPreferencesKey("reader_letter_spacing_percent")
+        val reversePageTap = booleanPreferencesKey("reader_reverse_page_tap")
 
         // v2: beige became the default; the key bump applies it to installs
         // that still carry the old default in the v1 key.
@@ -446,6 +452,9 @@ class SettingsRepository(private val context: Context) {
             prefs[Keys.invertImages] = updated.invertImages
             prefs[Keys.dropCaps] = updated.dropCaps
             prefs[Keys.pageTurnAnimation] = updated.pageTurnAnimation.name
+            prefs[Keys.fontWeight] = updated.fontWeight.coerceIn(100, 900)
+            prefs[Keys.letterSpacingPercent] = updated.letterSpacingPercent.coerceIn(-5, 20)
+            prefs[Keys.reversePageTap] = updated.reversePageTap
         }
     }
 
@@ -489,6 +498,9 @@ class SettingsRepository(private val context: Context) {
         val defaults = ReaderSettings()
         return ReaderSettings(
             fontSizeSp = this[Keys.fontSize] ?: defaults.fontSizeSp,
+            fontWeight = this[Keys.fontWeight]?.coerceIn(100, 900) ?: defaults.fontWeight,
+            letterSpacingPercent = this[Keys.letterSpacingPercent]?.coerceIn(-5, 20) ?: defaults.letterSpacingPercent,
+            reversePageTap = this[Keys.reversePageTap] ?: defaults.reversePageTap,
             lineHeight = this[Keys.lineHeight] ?: defaults.lineHeight,
             font = enumOrDefault(this[Keys.font], defaults.font),
             customFontPath = this[Keys.customFontPath],

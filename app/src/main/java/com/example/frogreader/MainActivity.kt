@@ -81,8 +81,8 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Search
-import com.example.frogreader.ui.settings.BookSourceSearchPage
-import com.example.frogreader.ui.nav.BookSourceSearchRoute
+import com.example.frogreader.ui.settings.OpdsSearchPage
+import com.example.frogreader.ui.nav.OpdsSearchRoute
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.FileOpen
@@ -194,6 +194,7 @@ import com.example.frogreader.ui.settings.SettingsScreen
 import com.example.frogreader.ui.profile.ProfileScreen
 import com.example.frogreader.ui.stats.StatsScreen
 import com.example.frogreader.ui.theme.FrogReaderTheme
+import com.example.frogreader.ui.theme.LocalFrogColors
 import com.example.frogreader.ui.theme.colorSchemeFor
 import com.example.frogreader.ui.theme.isDark
 import com.example.frogreader.ui.tracker.TrackerScreen
@@ -803,7 +804,7 @@ class MainActivity : ComponentActivity() {
                 }
             },
             onScanFolder = { folderPicker.launch(storageRootUri()) },
-            onSearchSources = { navController.navigate(BookSourceSearchRoute()) },
+            onSearchOpds = { navController.navigate(OpdsSearchRoute()) },
             onNewShelf = {
                 onTabSelected(NavTab.LIBRARY)
                 libraryViewModel.createShelf()
@@ -863,7 +864,7 @@ class MainActivity : ComponentActivity() {
                                     navController.navigate(ReaderRoute(book.id))
                                 },
                                 onOpenSettings = { navController.navigate(SettingsRoute) },
-                                onSearchBookSources = { keyword -> navController.navigate(BookSourceSearchRoute(keyword)) },
+                                onSearchOpds = { keyword -> navController.navigate(OpdsSearchRoute(keyword)) },
                                 onEditBook = { navController.navigate(BookInfoRoute(it.id, editRequested = true)) },
                                 onBookInfo = { navController.navigate(BookInfoRoute(it.id)) },
                             )
@@ -1040,9 +1041,9 @@ class MainActivity : ComponentActivity() {
                     )
                 }
 
-                composable<BookSourceSearchRoute> { entry ->
-                    BookSourceSearchPage(
-                        initialKeyword = entry.toRoute<BookSourceSearchRoute>().keyword,
+                composable<OpdsSearchRoute> { entry ->
+                    OpdsSearchPage(
+                        initialKeyword = entry.toRoute<OpdsSearchRoute>().keyword,
                         onBack = { navController.popBackStack() },
                         onBookAdded = libraryViewModel::revealBook,
                     )
@@ -1211,7 +1212,7 @@ internal fun FrogMainScaffold(
     onAddBook: () -> Unit,
     onScanFolder: () -> Unit,
     onNewShelf: () -> Unit,
-    onSearchSources: (() -> Unit)? = null,
+    onSearchOpds: (() -> Unit)? = null,
     readingQueueActive: Boolean = false,
     readingEntryFlowActive: Boolean = readingQueueActive,
     readingQueueFab: ReadingQueueFabState? = null,
@@ -1287,7 +1288,7 @@ internal fun FrogMainScaffold(
                     onExpandedChange = onImportExpandedChange,
                     onAddBook = onAddBook,
                     onScanFolder = onScanFolder,
-                    onSearchSources = onSearchSources,
+                    onSearchOpds = onSearchOpds,
                     onNewShelf = onNewShelf,
                 )
         }
@@ -1358,13 +1359,14 @@ private fun DockTab(
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
+    val frog = LocalFrogColors.current
     val container by animateColorAsState(
-        if (selected) colors.primaryContainer else colors.primaryContainer.copy(alpha = 0f),
+        if (selected) frog.dockAccent else frog.dockAccent.copy(alpha = 0f),
         tween(130),
         label = "dock selection",
     )
     val foreground by animateColorAsState(
-        if (selected) colors.onPrimaryContainer else colors.onSurfaceVariant,
+        if (selected) frog.onDockAccent else colors.onSurfaceVariant,
         tween(130),
         label = "dock tab tint",
     )
@@ -1419,7 +1421,7 @@ private fun ImportFabMenu(
     onAddBook: () -> Unit,
     onScanFolder: () -> Unit,
     onNewShelf: () -> Unit,
-    onSearchSources: (() -> Unit)?,
+    onSearchOpds: (() -> Unit)?,
 ) {
     // Hand-rolled rather than FloatingActionButtonMenu. That component staggers
     // its items by animating an INTEGER — the count of visible ones — with a
@@ -1435,22 +1437,22 @@ private fun ImportFabMenu(
         // rounded-square toggle stays level with the navigation capsule.
         horizontalAlignment = Alignment.End,
     ) {
-        if (onSearchSources != null) {
+        if (onSearchOpds != null) {
             FabMenuItem(
                 icon = Icons.Outlined.Search,
                 shape = connectedCardShape(last = false),
-                label = stringResource(R.string.book_sources_search),
+                label = stringResource(R.string.opds_explore),
                 visible = expanded,
                 onClick = {
                     onExpandedChange(false)
-                    onSearchSources()
+                    onSearchOpds()
                 },
             )
             FabMenuSpacer(expanded, ConnectedCardGap)
         }
         FabMenuItem(
             icon = Icons.Rounded.FileOpen,
-            shape = connectedCardShape(first = onSearchSources == null, last = false),
+            shape = connectedCardShape(first = onSearchOpds == null, last = false),
             label = stringResource(R.string.fab_add_book),
             visible = expanded,
             onClick = {

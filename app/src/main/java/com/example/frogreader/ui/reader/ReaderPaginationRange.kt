@@ -34,3 +34,6 @@ internal fun openingPaginationRange(
 }
 
 private const val MIN_PREVIEW_ITEMS = 256
+
+/** Exact pages for a complete chapter measured with the current layout. */
+internal data class ReaderChapterPages(val fromIndex: Int, val toIndex: Int, val pages: List<BookPage>)

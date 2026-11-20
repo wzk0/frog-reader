@@ -111,6 +111,10 @@ class ThemePaletteTest {
     @Test
     fun `Beige foreground roles stay readable on every supporting surface`() {
         assertForegroundRoles(AppTheme.SEPIA)
+        val scheme = colorSchemeFor(AppTheme.SEPIA)
+        val frog = frogColorsFor(AppTheme.SEPIA, scheme, dynamicColor = false)
+        assertContrast("selected dock fill", frog.dockAccent, scheme.surfaceContainerHigh, 3f)
+        assertContrast("selected dock label", frog.onDockAccent, frog.dockAccent)
     }
 
     private fun assertForegroundRoles(theme: AppTheme) {

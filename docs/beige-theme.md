@@ -26,7 +26,7 @@ consume `ReaderColors`. Never copy the hex values below into screen composables.
 | `onSurface` / `onBackground` | `#30291F` | Espresso body text and titles |
 | `onSurfaceVariant` | `#645443` | Full-opacity captions, metadata and inactive icons |
 | `primary` / `onPrimary` | `#745031` / `#FFFFFF` | Walnut actions, selected tabs, switches and active progress |
-| `primaryContainer` / `onPrimaryContainer` | `#EDDDC9` / `#49321F` | Tonal selection and selected navigation |
+| `primaryContainer` / `onPrimaryContainer` | `#EDDDC9` / `#49321F` | Tonal selection |
 | `secondary` / `onSecondary` | `#665746` / `#FFFFFF` | Supporting filled actions |
 | `secondaryContainer` / `onSecondaryContainer` | `#EBE0D1` / `#574736` | Settings and profile icon tiles |
 | `tertiary` / `onTertiary` | `#805854` / `#FFFFFF` | Optional muted rose semantic category |
@@ -57,7 +57,7 @@ components must not inherit default purple fixed roles.
    to prevent an additional accent tint. Normal card shadows are modest (0–2 dp);
    the dock uses 3 dp. Preserve the established shared geometry.
 4. Main actions and filled selected tabs use `primary` / `onPrimary`.
-   Selected navigation uses `primaryContainer` / `onPrimaryContainer`.
+   The selected dock tab and FAB share the stronger `primary` / `onPrimary` pair.
    Secondary and unselected controls remain neutral. `inverseSurface` belongs
    to inverse content, not selected tabs.
 5. Reader controls use the same shapes, group backgrounds and filled-selection

@@ -59,6 +59,10 @@ private fun FixedHeightListLibraryChromePreview() = LibraryChrome(AppTheme.WHITE
 @Composable
 private fun BeigeLibraryChromePreview() = LibraryChrome(AppTheme.SEPIA, expanded = false)
 
+@Preview(name = "Beige · profile selected", widthDp = 393, heightDp = 882, showSystemUi = true)
+@Composable
+private fun BeigeProfileDockPreview() = LibraryChrome(AppTheme.SEPIA, expanded = false, selectedTab = NavTab.PROFILE)
+
 @Preview(name = "Beige · library list", widthDp = 393, heightDp = 882, showSystemUi = true)
 @Preview(name = "Beige · library list · large text", widthDp = 360, heightDp = 800, showSystemUi = true, fontScale = 1.5f)
 @Composable
@@ -160,6 +164,7 @@ private fun LibraryChrome(
     heroProgress: ReadingProgress = ReadingProgress(fraction = 0.84f),
     heroStatus: ReadingStatus = ReadingStatus.READING,
     previewColorScheme: ColorScheme? = null,
+    selectedTab: NavTab = NavTab.LIBRARY,
 ) {
     val viewModel = remember(mode, heroTitle, heroAuthor, heroProgress, heroStatus) {
         LibraryViewModel(PreviewLibraryRepository(heroTitle, heroAuthor, heroProgress, heroStatus)).apply { setViewMode(mode) }
@@ -168,9 +173,9 @@ private fun LibraryChrome(
     val content: @Composable () -> Unit = {
         FrogMainScaffold(
             navigationVisible = true,
-            selectedTab = NavTab.LIBRARY,
+            selectedTab = selectedTab,
             onTabSelected = {},
-            importVisible = true,
+            importVisible = selectedTab == NavTab.LIBRARY,
             importing = false,
             importExpanded = menuExpanded,
             onImportExpandedChange = { menuExpanded = it },

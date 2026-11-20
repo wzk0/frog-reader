@@ -59,4 +59,4 @@ data class BookMetadataRoute(val bookId: String)
 data class BookInfoRoute(val bookId: String, val reviewRequested: Boolean = false, val editRequested: Boolean = false)
 
 @Serializable
-data class BookSourceSearchRoute(val keyword: String = "")
+data class OpdsSearchRoute(val keyword: String = "")

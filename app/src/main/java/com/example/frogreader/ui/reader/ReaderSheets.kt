@@ -1,5 +1,6 @@
 package com.example.frogreader.ui.reader
 
+import androidx.compose.material.icons.rounded.SwapHoriz
 import com.example.frogreader.ui.components.SpaceBeforeHeading
 import com.example.frogreader.ui.components.SpaceAfterHeading
 import androidx.compose.ui.semantics.Role
@@ -15,12 +16,14 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -642,6 +645,7 @@ fun ReaderSettingsControls(
     publisherStyle: PublisherStyle? = null,
     /** Live book page numbers for page counter preview cards. */
     pageCounterInfo: PageCounterInfo? = null,
+    defaults: ReaderSettings = ReaderSettings(),
 ) {
     val scheme = MaterialTheme.colorScheme
     val panelColors = remember(colors, scheme) { colors.forSettings(scheme) }
@@ -876,6 +880,8 @@ fun ReaderSettingsControls(
                     increaseEnabled = shownLineHeight < 2.0f,
                     decreaseDescription = stringResource(R.string.reader_decrease_line_spacing),
                     increaseDescription = stringResource(R.string.reader_increase_line_spacing),
+                    resetLabel = stringResource(R.string.reader_reset_typography, stringResource(R.string.reader_line_height)),
+                    onReset = { onUpdate { bakeBook(book?.lineHeight != null)(it).copy(lineHeight = defaults.lineHeight) } },
                     onDecrease = {
                         val bake = bakeBook(book?.lineHeight != null)
                         onUpdate {
@@ -926,6 +932,8 @@ fun ReaderSettingsControls(
                     increaseEnabled = settings.fontSizeSp < 32f,
                     decreaseDescription = stringResource(R.string.reader_decrease_font_size),
                     increaseDescription = stringResource(R.string.reader_increase_font_size),
+                    resetLabel = stringResource(R.string.reader_reset_typography, stringResource(R.string.reader_font_size)),
+                    onReset = { onUpdate { it.copy(fontSizeSp = defaults.fontSizeSp) } },
                     onDecrease = {
                         onUpdate { it.copy(fontSizeSp = (it.fontSizeSp - 1f).coerceAtLeast(12f)) }
                     },
@@ -954,6 +962,35 @@ fun ReaderSettingsControls(
 
         Spacer(Modifier.height(SpaceBeforeHeading))
 
+        ReaderControlPair(
+            first = {
+                TypographyStepper(
+                    label = stringResource(R.string.reader_font_weight),
+                    value = settings.fontWeight.coerceIn(100, 900).toString(),
+                    colors = panelColors,
+                    canDecrease = settings.fontWeight > 100,
+                    canIncrease = settings.fontWeight < 900,
+                    onReset = { onUpdate { it.copy(fontWeight = defaults.fontWeight) } },
+                    onChange = { step -> onUpdate { it.copy(fontWeight = (it.fontWeight + step * 100).coerceIn(100, 900)) } },
+                )
+            },
+            second = {
+                TypographyStepper(
+                    label = stringResource(R.string.reader_letter_spacing),
+                    value = stringResource(R.string.reader_letter_spacing_value, settings.letterSpacingPercent.coerceIn(-5, 20)),
+                    colors = panelColors,
+                    canDecrease = settings.letterSpacingPercent > -5,
+                    canIncrease = settings.letterSpacingPercent < 20,
+                    onReset = { onUpdate { it.copy(letterSpacingPercent = defaults.letterSpacingPercent) } },
+                    onChange = { step -> onUpdate {
+                        it.copy(letterSpacingPercent = (it.letterSpacingPercent + step).coerceIn(-5, 20))
+                    } },
+                )
+            },
+        )
+
+        Spacer(Modifier.height(SpaceBeforeHeading))
+
         // Side margins and reading mode, side by side. The bottom of this
         // row is the "peek" height the half-open panel snaps to.
         ReaderControlPair(
@@ -972,6 +1009,8 @@ fun ReaderSettingsControls(
                     increaseEnabled = settings.sideMarginDp < ReaderSettings.MAX_SIDE_MARGIN_DP,
                     decreaseDescription = stringResource(R.string.reader_decrease_side_margins),
                     increaseDescription = stringResource(R.string.reader_increase_side_margins),
+                    resetLabel = stringResource(R.string.reader_reset_typography, stringResource(R.string.reader_section_margins)),
+                    onReset = { onUpdate { it.copy(pageMargins = defaults.pageMargins, pageMarginDp = defaults.pageMarginDp) } },
                     onDecrease = {
                         onUpdate {
                             it.copy(
@@ -1030,6 +1069,15 @@ fun ReaderSettingsControls(
                     selected = settings.pageTurnAnimation,
                     colors = panelColors,
                     onSelected = { animation -> onUpdate { it.copy(pageTurnAnimation = animation) } },
+                )
+                Spacer(Modifier.height(SpaceAfterHeading))
+                SettingToggleRow(
+                    icon = Icons.Rounded.SwapHoriz,
+                    title = stringResource(R.string.reader_reverse_page_tap),
+                    subtitle = stringResource(R.string.reader_reverse_page_tap_hint),
+                    colors = panelColors,
+                    checked = settings.reversePageTap,
+                    onCheckedChange = { enabled -> onUpdate { it.copy(reversePageTap = enabled) } },
                 )
             }
         }
@@ -1522,6 +1570,8 @@ private fun StepperGroup(
     decreaseDescription: String? = null,
     increaseDescription: String? = null,
     repeatOnHold: Boolean = true,
+    resetLabel: String,
+    onReset: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -1539,15 +1589,21 @@ private fun StepperGroup(
             onStep = onDecrease,
             content = decrease,
         )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = colors.onChrome,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            maxLines = 1,
-            modifier = Modifier.weight(1f),
-        )
+        Box(
+            modifier = Modifier.weight(1f).defaultMinSize(minHeight = 40.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .combinedClickable(onLongClickLabel = resetLabel, onLongClick = onReset, onClick = {}),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = colors.onChrome,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                maxLines = 1,
+            )
+        }
         ReaderStepperButton(
             colors = colors,
             enabled = increaseEnabled,
@@ -1683,6 +1739,33 @@ private fun SettingSlider(
             )
         }
     }
+}
+
+@Composable
+private fun TypographyStepper(
+    label: String,
+    value: String,
+    colors: ReaderColors,
+    canDecrease: Boolean,
+    canIncrease: Boolean,
+    onChange: (Int) -> Unit,
+    onReset: () -> Unit,
+) {
+    PanelSectionLabel(label, colors)
+    StepperGroup(
+        value = value,
+        colors = colors,
+        decreaseEnabled = canDecrease,
+        increaseEnabled = canIncrease,
+        decreaseDescription = stringResource(R.string.reader_decrease_typography, label),
+        increaseDescription = stringResource(R.string.reader_increase_typography, label),
+        resetLabel = stringResource(R.string.reader_reset_typography, label),
+        onReset = onReset,
+        onDecrease = { onChange(-1) },
+        onIncrease = { onChange(1) },
+        decrease = { Text("−", style = MaterialTheme.typography.titleSmall, color = colors.accent) },
+        increase = { Text("+", style = MaterialTheme.typography.titleMedium, color = colors.accent) },
+    )
 }
 
 @Composable

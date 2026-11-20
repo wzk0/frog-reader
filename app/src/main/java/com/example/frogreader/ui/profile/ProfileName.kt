@@ -1,5 +1,7 @@
 package com.example.frogreader.ui.profile
 
+import com.example.frogreader.ui.components.frogTextFieldOutline
+import androidx.compose.foundation.layout.padding
 import com.example.frogreader.ui.components.rememberPredictiveBackMotion
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -198,7 +200,10 @@ internal fun ProfileName(
                     capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Done,
                 ),
                 keyboardActions = KeyboardActions(onDone = { finishEditing() }),
-                modifier = Modifier.fillMaxWidth().focusRequester(focus)
+                modifier = Modifier.fillMaxWidth()
+                    .frogTextFieldOutline(foreground, active = hadFocus)
+                    .padding(horizontal = 8.dp)
+                    .focusRequester(focus)
                     .onFocusChanged {
                         if (it.isFocused) hadFocus = true
                         else if (hadFocus) finishEditing(clearFocus = false)

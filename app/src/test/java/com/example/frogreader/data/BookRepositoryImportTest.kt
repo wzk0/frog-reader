@@ -103,14 +103,14 @@ class BookRepositoryImportTest {
     fun `source download becomes a readable top level entry even if the same file was shelved`() = runTest {
         picked = File(testDir, "source.md").apply { writeText("# 测试书\n\n## 第一章\n\n正文") }
         val repository = repository()
-        val firstImport = repository.importSourceBook(anyUri)
+        val firstImport = repository.importOpdsBook(anyUri)
         assertEquals("测试书", firstImport.title)
         assertEquals(BookFormat.MD, firstImport.format)
         assertTrue(repository.loadContent(firstImport).chapters.isNotEmpty())
         val shelf = repository.createShelf(listOf(firstImport.id), "已有书架")
         assertEquals(listOf(firstImport.id), shelf.bookIds)
 
-        val secondImport = repository.importSourceBook(anyUri)
+        val secondImport = repository.importOpdsBook(anyUri)
 
         assertEquals(firstImport.id, secondImport.id)
         val reloaded = repository()

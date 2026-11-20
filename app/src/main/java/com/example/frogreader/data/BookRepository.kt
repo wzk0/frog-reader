@@ -844,7 +844,7 @@ open class BookRepository(private val context: Context? = null) {
      * Puts a staged file into the library, as a new book or over an existing one.
      */
     /** Adds a downloaded book as a top-level library entry, including an exact duplicate already on a shelf. */
-    internal suspend fun importSourceBook(uri: Uri): Book {
+    internal suspend fun importOpdsBook(uri: Uri): Book {
         val staged = stageImport(uri)
         try {
             val existing = staged.duplicateOf?.takeIf { it.match == DuplicateMatch.SAME_FILE }?.book
@@ -1282,6 +1282,7 @@ open class BookRepository(private val context: Context? = null) {
     private val contentCacheWrites = HashMap<String, kotlinx.coroutines.Job>()
 
     /** Parses already running, so a second asker joins instead of repeating. */
+    private val contentParseProgress = HashMap<String, MutableStateFlow<Float?>>()
     private val inFlight = HashMap<String, Deferred<BookContent>>()
     private val contentPreviews = HashMap<String, MutableStateFlow<BookContent?>>()
 
@@ -1304,8 +1305,11 @@ open class BookRepository(private val context: Context? = null) {
         val parse = synchronized(contentLock) {
             inFlight[parseKey] ?: run {
                 val preview = contentPreviews.getOrPut(parseKey) { MutableStateFlow(null) }
+                val progress = contentParseProgress.getOrPut(parseKey) { MutableStateFlow(null) }
                 val started = bookkeeping.async(start = CoroutineStart.LAZY) {
-                    parseAndCache(book) { partial ->
+                    parseAndCache(book, onProgress = { fraction ->
+                        progress.value = fraction
+                    }) { partial ->
                         // A replaced/deleted source must never surface under
                         // the book's new file, even while its old parse finishes.
                         if (isCurrentContentSource(book)) preview.value = partial
@@ -1317,6 +1321,7 @@ open class BookRepository(private val context: Context? = null) {
                         if (inFlight[parseKey] === started) {
                             inFlight.remove(parseKey)
                             contentPreviews.remove(parseKey, preview)
+                            contentParseProgress.remove(parseKey, progress)
                         }
                     }
                 }
@@ -1363,16 +1368,52 @@ open class BookRepository(private val context: Context? = null) {
         }
     }
 
-    private fun isCurrentContentSource(book: Book): Boolean =
-        books.value.firstOrNull { it.id == book.id }?.fileName == book.fileName
-
-    private fun parseAndCache(book: Book, onPreview: (BookContent) -> Unit): BookContent {
-        readerCacheBudget.pin(book.id).use {
-            return parseAndCachePinned(book, onPreview)
+    internal suspend fun preparseBook(book: Book, onProgress: (Float?) -> Unit): Boolean {
+        val parseKey = "${book.id}/${book.fileName}"
+        val progress = synchronized(contentLock) {
+            contentParseProgress.getOrPut(parseKey) { MutableStateFlow(null) }
+        }
+        return coroutineScope {
+            val observer = launch(start = CoroutineStart.UNDISPATCHED) {
+                progress.collect { onProgress(it) }
+            }
+            try {
+                loadContent(book)
+                observer.cancelAndJoin()
+                synchronized(contentLock) { contentCacheWrites[book.id] }?.let { writer ->
+                    onProgress(1f)
+                    writer.join()
+                }
+                check(isCurrentContentSource(book))
+                val source = File(booksDir, checkNotNull(book.fileName))
+                withContext(Dispatchers.IO) { parsedContentCache.hasCompleteSnapshot(book.id, source) }
+            } finally {
+                observer.cancel()
+                synchronized(contentLock) {
+                    if (inFlight[parseKey] == null) contentParseProgress.remove(parseKey, progress)
+                }
+            }
         }
     }
 
-    private fun parseAndCachePinned(book: Book, onPreview: (BookContent) -> Unit): BookContent {
+    private fun isCurrentContentSource(book: Book): Boolean =
+        books.value.firstOrNull { it.id == book.id }?.fileName == book.fileName
+
+    private fun parseAndCache(
+        book: Book,
+        onProgress: (Float) -> Unit,
+        onPreview: (BookContent) -> Unit,
+    ): BookContent {
+        readerCacheBudget.pin(book.id).use {
+            return parseAndCachePinned(book, onProgress, onPreview)
+        }
+    }
+
+    private fun parseAndCachePinned(
+        book: Book,
+        onProgress: (Float) -> Unit,
+        onPreview: (BookContent) -> Unit,
+    ): BookContent {
         val name = book.fileName ?: throw IOException("这本书还没有附加文件")
         val file = File(booksDir, name)
         if (!file.exists()) throw IOException("书籍文件已丢失")
@@ -1396,6 +1437,10 @@ open class BookRepository(private val context: Context? = null) {
         if (disk?.complete == false && diskPrefix == null && disk.content.totalElements > previewElementIndex) {
             onPreview(disk.content)
         }
+        var savedPreviewElements = maxOf(
+            diskPrefix?.content?.totalElements ?: 0,
+            disk?.takeIf { !it.complete }?.content?.totalElements ?: 0,
+        )
         fun publishPreview(partial: BookContent) {
             // The disk prefix can be farther ahead than the parser's first
             // checkpoint. Never replace visible text with a shorter prefix.
@@ -1403,7 +1448,8 @@ open class BookRepository(private val context: Context? = null) {
             onPreview(partial)
             if (contentParserForTests == null) {
                 val snapshot = openingContentSnapshot(partial, previewElementIndex)
-                if (disk?.complete != false || snapshot.totalElements > disk.content.totalElements) {
+                if (snapshot.totalElements > savedPreviewElements) {
+                    savedPreviewElements = snapshot.totalElements
                     scheduleContentCacheWrite(book, file, snapshot, complete = false)
                 }
             }
@@ -1414,10 +1460,14 @@ open class BookRepository(private val context: Context? = null) {
                 EpubParser.parseContent(
                     file, extracted, ReaderResourceLimits.DEFAULT,
                     onPreview = ::publishPreview, previewElementIndex = previewElementIndex,
+                    onProgress = onProgress,
                 )
             } else {
                 BookParsers.parseContent(file, book.format, extracted)
             }
+        if (disk?.complete != true && contentParserForTests == null) {
+            scheduleContentCacheWrite(book, file, content, complete = true)
+        }
         synchronized(contentLock) {
             if (books.value.firstOrNull { it.id == book.id }?.fileName == book.fileName) {
                 cachedContentResources?.close()
@@ -1426,9 +1476,6 @@ open class BookRepository(private val context: Context? = null) {
                 cachedContentFileName = book.fileName
                 cachedContent = content
             }
-        }
-        if (disk?.complete != true && contentParserForTests == null) {
-            scheduleContentCacheWrite(book, file, content, complete = true)
         }
         trimReaderCaches()
         return content
