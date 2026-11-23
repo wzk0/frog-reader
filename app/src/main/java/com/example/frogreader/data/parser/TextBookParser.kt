@@ -71,12 +71,55 @@ internal object TextBookParser {
             if (offset != 0) throw IOException("Invalid ${charset.name()} text", error)
             decodeLegacy(bytes, offset, error)
         }
-        if (text.any { (it < ' ' && it !in "\n\r\t\u000c") || it in '\u007f'..'\u009f' }) {
+        val controls = text.count { it.isControlCharacter() }
+        if (text.isNotEmpty() && controls.toLong() * CONTROL_SPARSITY >= text.length) {
             throw IOException("The file contains binary data, not readable text.")
         }
         if (text.isBlank()) throw IOException("The text document is empty.")
-        return text.replace("\r\n", "\n").replace('\r', '\n').replace('\u000c', '\n')
+        return normalizeLines(text, dropControls = controls > 0)
     }
+
+    /**
+     * Control characters that never belong in a book: C0 except tab, newline and
+     * form feed, plus DEL and the C1 block.
+     *
+     * A binary that happens to decode is full of them; a web novel carries the
+     * odd one (恐怖复苏 has a single U+007F in six million characters) and must
+     * still open, so scattered ones are dropped and only a real share is fatal.
+     */
+    private fun Char.isControlCharacter(): Boolean =
+        (this < ' ' && this !in "\n\r\t\u000c") || this in '\u007f'..'\u009f'
+
+    /**
+     * `\r\n`, a lone `\r` and `\u000c` become `\n`; [dropControls] also removes
+     * the stray control characters counted by the caller. One pass, because a
+     * 40 MB novel would otherwise be copied once per replacement.
+     */
+    private fun normalizeLines(text: String, dropControls: Boolean): String {
+        val out = StringBuilder(text.length)
+        var index = 0
+        while (index < text.length) {
+            val char = text[index]
+            when {
+                char == '\r' && index + 1 < text.length && text[index + 1] == '\n' -> {
+                    out.append('\n')
+                    index++
+                }
+                char == '\r' || char == '\u000c' -> out.append('\n')
+                dropControls && char.isControlCharacter() -> Unit
+                else -> out.append(char)
+            }
+            index++
+        }
+        return out.toString()
+    }
+
+    /**
+     * Characters per control character that still reads as text: one in a
+     * thousand. A novel carries one in millions (see above) and passes, while
+     * `hello\u0000world` and anything else that looks half binary does not.
+     */
+    private const val CONTROL_SPARSITY = 1_000L
 
     /**
      * Pages tried when a file carries no BOM and is not valid UTF-8.

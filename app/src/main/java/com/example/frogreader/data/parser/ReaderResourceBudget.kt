@@ -24,7 +24,10 @@ internal data class ReaderResourceLimits(
     val maxCompressionRatio: Long = 2_000,
     val compressionRatioCheckFromBytes: Long = 8L * 1024 * 1024,
     val maxPackageXmlBytes: Long = 16L * 1024 * 1024,
-    val maxTextBytes: Long = 16L * 1024 * 1024,
+    // A web novel is one .txt: 剑来 is 38 MiB of UTF-8 (13.6M characters) and
+    // decodes in a quarter of a second. 64 MiB covers the collected epics this
+    // reader is asked to open without letting a hostile file pick its own size.
+    val maxTextBytes: Long = 64L * 1024 * 1024,
     val maxChapterBytes: Long = 32L * 1024 * 1024,
     val maxStylesheetBytes: Long = 8L * 1024 * 1024,
     val maxCoverBytes: Long = 32L * 1024 * 1024,

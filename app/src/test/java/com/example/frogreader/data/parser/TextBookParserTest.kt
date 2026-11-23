@@ -163,6 +163,24 @@ class TextBookParserTest {
         assertEquals(listOf("龙族Ⅳ：奥丁之渊\n作者：江南样本樣"), paragraphs.map { it.text.text })
     }
 
+    @Test fun `a stray control character is dropped instead of rejecting the file`() {
+        // 恐怖复苏 carries exactly one U+007F in six million characters; a
+        // NUL-laced binary is rejected by the same rule at a much higher share.
+        val paragraph = "杨间脸色变化不定，".repeat(80)
+        val source = file("stray.txt", "").apply {
+            writeText("$paragraph\u007f$paragraph\n\n$paragraph")
+        }
+        val text = TextBookParser.readText(source)
+        assertFalse(text.contains('\u007f'))
+        assertTrue(text.startsWith(paragraph + paragraph))
+        assertEquals(2, text.split("\n\n").size)
+        assertEquals(
+            2,
+            BookParsers.parseContent(source, BookFormat.TXT, temp.root)
+                .chapters.single().elements.count { it is ContentElement.Paragraph },
+        )
+    }
+
     @Test fun `binary empty oversized and deeply nested files are rejected`() {
         val binary = file("bad.txt", "hello\u0000world")
         assertThrows(IOException::class.java) { BookParsers.detectAndStore(binary, temp.root, "rejected") }
