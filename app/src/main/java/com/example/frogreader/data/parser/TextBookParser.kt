@@ -121,6 +121,14 @@ internal object TextBookParser {
      */
     private const val CONTROL_SPARSITY = 1_000L
 
+    /** Longest element a merged TXT block may produce, in characters. */
+    private const val MERGED_PARAGRAPH_LIMIT = 4_000
+
+    /** How many non-blank lines decide the paragraph convention. */
+    private const val PARAGRAPH_SAMPLE_LINES = 1_000
+
+    private const val TERMINAL_PUNCTUATION = "。！？!?…；;」』”\"'）)】》〉·"
+
     /**
      * Pages tried when a file carries no BOM and is not valid UTF-8.
      *
@@ -141,6 +149,32 @@ internal object TextBookParser {
         throw IOException("Unsupported text encoding. Save the file as UTF-8.", cause)
     }
 
+    /**
+     * Which paragraph convention a TXT file uses.
+     *
+     * Blank lines between paragraphs (Markdown, Project Gutenberg, anything
+     * hard-wrapped) versus one paragraph per line, which is what most Chinese
+     * web novels are: 蛊真人 has 216,280 non-blank lines and 11 blank ones, so
+     * merging produced elements of millions of characters — its largest
+     * "paragraph" was 2.8M characters, and the paginator lays an element out
+     * whole before cutting a page, which made the book impossible to open.
+     *
+     * The discriminator is where the lines end. A paragraph line ends with
+     * sentence-final punctuation (99% of them there); wrapped prose breaks mid
+     * sentence, which is ~10–20% even in Chinese.
+     */
+    private fun linesAreParagraphs(text: String): Boolean {
+        var lines = 0
+        var terminated = 0
+        for (line in text.lineSequence()) {
+            if (line.isBlank()) continue
+            lines++
+            if (line.trimEnd().last() in TERMINAL_PUNCTUATION) terminated++
+            if (lines == PARAGRAPH_SAMPLE_LINES) break
+        }
+        return lines > 1 && terminated * 10 >= lines * 6
+    }
+
     fun parseMetadata(file: File, format: BookFormat): BookMetadata {
         val text = readText(file)
         val title = if (format == BookFormat.MD) markdownBody(text).selectFirst("h1, h2, h3, h4, h5, h6")
@@ -153,6 +187,9 @@ internal object TextBookParser {
         val text = readText(file)
         if (format == BookFormat.TXT) {
             val elements = mutableListOf<ContentElement>()
+            // One element per line when the file says so; a merged block
+            // otherwise, bounded by MERGED_PARAGRAPH_LIMIT.
+            val linePerParagraph = linesAreParagraphs(text)
             val paragraph = StringBuilder()
             fun flush() {
                 if (paragraph.isNotEmpty()) {
@@ -161,9 +198,38 @@ internal object TextBookParser {
                 }
             }
             for (line in text.lineSequence()) {
-                if (line.isBlank()) flush() else {
-                    if (paragraph.isNotEmpty()) paragraph.append('\n')
-                    paragraph.append(line)
+                if (linePerParagraph) {
+                    if (line.isNotBlank()) {
+                        elements += ContentElement.Paragraph(AnnotatedString(line))
+                    }
+                    continue
+                }
+                if (line.isBlank()) {
+                    flush()
+                    continue
+                }
+                // The paginator measures an element whole before it cuts a
+                // page, so a merged block may not grow past the limit — only
+                // then does a source line get cut, and the cut is placed so the
+                // continuation reads as one paragraph.
+                if (paragraph.isNotEmpty() &&
+                    paragraph.length + 1 + line.length > MERGED_PARAGRAPH_LIMIT
+                ) {
+                    flush()
+                }
+                var start = 0
+                while (start < line.length) {
+                    val room = MERGED_PARAGRAPH_LIMIT - paragraph.length -
+                        if (paragraph.isEmpty() || start > 0) 0 else 1
+                    if (room <= 0) {
+                        flush()
+                        continue
+                    }
+                    val end = minOf(start + room, line.length)
+                    if (paragraph.isNotEmpty() && start == 0) paragraph.append('\n')
+                    paragraph.append(line, start, end)
+                    start = end
+                    if (paragraph.length >= MERGED_PARAGRAPH_LIMIT) flush()
                 }
             }
             flush()

@@ -163,6 +163,26 @@ class TextBookParserTest {
         assertEquals(listOf("龙族Ⅳ：奥丁之渊\n作者：江南样本樣"), paragraphs.map { it.text.text })
     }
 
+    @Test fun `one paragraph per line is honoured when the lines end with punctuation`() {
+        // 蛊真人: 216,280 non-blank lines, 11 blank ones, 99% of them ending with
+        // 。 Merging them produced 2.8M-character elements the paginator could
+        // not lay out.
+        val lines = listOf("第一段。", "第二段！", "第三段？", "第四段。")
+        val paragraphs = BookParsers.parseContent(
+            file("lines.txt", lines.joinToString("\n")), BookFormat.TXT, temp.root,
+        ).chapters.single().elements.filterIsInstance<ContentElement.Paragraph>()
+        assertEquals(lines, paragraphs.map { it.text.text })
+    }
+
+    @Test fun `a merged TXT block never grows past the layout limit`() {
+        val line = "甲".repeat(3_000)
+        val paragraphs = BookParsers.parseContent(
+            file("wrapped.txt", "$line\n$line\n$line"), BookFormat.TXT, temp.root,
+        ).chapters.single().elements.filterIsInstance<ContentElement.Paragraph>()
+        assertEquals(3, paragraphs.size)
+        assertTrue(paragraphs.all { it.text.length <= 4_000 })
+    }
+
     @Test fun `a stray control character is dropped instead of rejecting the file`() {
         // 恐怖复苏 carries exactly one U+007F in six million characters; a
         // NUL-laced binary is rejected by the same rule at a much higher share.
