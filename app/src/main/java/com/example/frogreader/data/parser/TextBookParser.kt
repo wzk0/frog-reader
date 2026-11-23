@@ -50,7 +50,7 @@ internal object TextBookParser {
         }
     }
 
-    /** Strict Unicode decoding; legacy Cyrillic text falls back to Windows-1251. */
+    /** Strict Unicode decoding; BOM-less legacy text falls back to [legacyCharsets]. */
     fun readText(file: File, maxBytes: Long = ReaderResourceLimits.DEFAULT.maxTextBytes): String {
         val bytes = file.inputStream().use { it.readBytesBounded(maxBytes, "text document") }
         fun prefix(vararg values: Int) = values.size <= bytes.size &&
@@ -69,13 +69,33 @@ internal object TextBookParser {
             decode(charset)
         } catch (error: CharacterCodingException) {
             if (offset != 0) throw IOException("Invalid ${charset.name()} text", error)
-            decode(Charset.forName("windows-1251"))
+            decodeLegacy(bytes, offset, error)
         }
         if (text.any { (it < ' ' && it !in "\n\r\t\u000c") || it in '\u007f'..'\u009f' }) {
             throw IOException("The file contains binary data, not readable text.")
         }
         if (text.isBlank()) throw IOException("The text document is empty.")
         return text.replace("\r\n", "\n").replace('\r', '\n').replace('\u000c', '\n')
+    }
+
+    /**
+     * Pages tried when a file carries no BOM and is not valid UTF-8.
+     *
+     * Chinese TXT files in the wild are usually GBK/GB18030, and Windows-1251
+     * has no mapping for some of the bytes GBK uses (0x98, for one), so a GBK
+     * book used to fail decoding and reached the user as "无法添加图书". GB18030
+     * covers GBK, so it is tried first; Windows-1251 stays as the last resort
+     * it has always been for legacy Cyrillic text.
+     */
+    private val legacyCharsets = listOf("GB18030", "windows-1251")
+
+    private fun decodeLegacy(bytes: ByteArray, offset: Int, cause: CharacterCodingException): String {
+        for (name in legacyCharsets) {
+            val decoder = runCatching { Charset.forName(name).newDecoder() }.getOrNull() ?: continue
+            runCatching { decoder.decode(ByteBuffer.wrap(bytes, offset, bytes.size - offset)).toString() }
+                .onSuccess { return it }
+        }
+        throw IOException("Unsupported text encoding. Save the file as UTF-8.", cause)
     }
 
     fun parseMetadata(file: File, format: BookFormat): BookMetadata {

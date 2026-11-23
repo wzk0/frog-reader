@@ -153,6 +153,16 @@ class TextBookParserTest {
         assertEquals(0 to 0, content.linkTargets[target])
     }
 
+    @Test fun `GBK text without a BOM decodes instead of failing the Cyrillic fallback`() {
+        // 樣 is GBK 0x98 0xD3, and Windows-1251 cannot represent 0x98 at all.
+        val text = "龙族Ⅳ：奥丁之渊\r\n作者：江南样本樣"
+        val source = file("gbk.txt", "").apply { writeBytes(text.toByteArray(Charset.forName("GB18030"))) }
+        assertEquals(text.replace("\r\n", "\n"), TextBookParser.readText(source))
+        val paragraphs = BookParsers.parseContent(source, BookFormat.TXT, temp.root)
+            .chapters.single().elements.filterIsInstance<ContentElement.Paragraph>()
+        assertEquals(listOf("龙族Ⅳ：奥丁之渊\n作者：江南样本樣"), paragraphs.map { it.text.text })
+    }
+
     @Test fun `binary empty oversized and deeply nested files are rejected`() {
         val binary = file("bad.txt", "hello\u0000world")
         assertThrows(IOException::class.java) { BookParsers.detectAndStore(binary, temp.root, "rejected") }

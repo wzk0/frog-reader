@@ -9,7 +9,7 @@
     <string name="opds_paste_url">粘贴目录链接</string>
     <string name="opds_unreachable">不可用</string>
     <string name="opds_import_file">导入目录文件</string>
-    <string name="opds_import_hint">从 Atom 或 OPDS JSON 文件读取目录地址</string>
+    <string name="opds_import_hint">从 Atom 或 OPDS JSON 文件添加目录</string>
     <string name="opds_file_error">无法读取目录地址。请确认文件中有 OPDS 目录的在线链接。</string>
     <string name="opds_operations">操作</string>
     <string name="opds_add">添加目录</string>
