@@ -1,0 +1,60 @@
+name: Pull Request Check
+
+# Pull requests, plus a manual run when someone wants the suite without a tag.
+# Never touches the signing secrets and never uploads an artifact.
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  JAVA_VERSION: '21'
+  ANDROID_PLATFORM: 'platforms;android-37.0'
+  ANDROID_BUILD_TOOLS: 'build-tools;37.0.0'
+
+jobs:
+  verify:
+    name: Test, Build and Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
+
+      - name: Install Android SDK
+        run: |
+          (set +o pipefail; yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null)
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" \
+            "${{ env.ANDROID_PLATFORM }}" \
+            "${{ env.ANDROID_BUILD_TOOLS }}"
+
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      # `test` runs the suite AGP actually creates here — the debug unit-test
+      # variant; the optimised release variant has none.
+      - name: Run unit tests
+        run: ./gradlew test --stacktrace
+
+      - name: Build Debug
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Run Android Lint
+        run: ./gradlew :app:lintDebug --stacktrace

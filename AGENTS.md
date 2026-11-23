@@ -202,15 +202,19 @@ OPDS 网络与解析逻辑集中在 `data/Opds.kt`，支持用户配置的 HTTP/
 
 ## 8. CI 与发布签名
 
-### 8.1 CI（`.github/workflows/ci.yml`）
-触发：`push` 到 `main`、`alpha-*|beta-*|v*` tag、PR、手动触发（`workflow_dispatch`）。三个 job：
+### 8.1 CI（`.github/workflows/`，一个触发对应一个文件）
 
-- `quick-check`（push 到 `main`）：JDK 21 + sdkmanager，只跑 `:app:compileDebugKotlin`，20 分钟超时。
-- `pull-request-check`（PR / `workflow_dispatch`）：`test` → `assembleDebug` → `:app:lintDebug`，
-  不碰签名材料，也不产出 artifact。
-  注意：AGP 在这里只生成 debug 单测变体（release 开了 R8 优化，没有单测变体），
-  所以 `test` 就是全部；不要写 `:app:testReleaseUnitTest`，那个任务不存在。
-- `release`（tag）：`permissions: contents: write`，流程为
+| 文件 | 触发 | 内容 |
+|---|---|---|
+| `quick-check.yml` | `push` 到 `main` | JDK 21 + sdkmanager，只跑 `:app:compileDebugKotlin`，20 分钟超时 |
+| `pull-request-check.yml` | PR 到 `main`、`workflow_dispatch` | `test` → `assembleDebug` → `:app:lintDebug`，不碰签名材料、不产出 artifact，35 分钟 |
+| `release.yml` | `push` tag `alpha-*`/`beta-*`/`v*` | 签名 release 构建 + 校验 + 发布，见下 |
+
+触发条件写在 `on:` 上，**不再靠 job 级 `if:` 过滤**；三个 workflow 各自带一份 JDK/SDK 准备步骤
+（不抽 composite action，重复十来行换取单文件可独立读懂）。`concurrency` 用 `${{ github.workflow }}-${{ github.ref }}`，
+因为 `github.workflow` 是 workflow 名，拆开后天然互不干扰。
+
+`release.yml` 的流程：
   1. JDK 21（temurin，`cache: gradle`）+ sdkmanager 装 `platforms;android-37.0`、`build-tools;37.0.0`
   2. `./gradlew test`
   3. 解码签名密钥到 `$RUNNER_TEMP`（tag 构建四个 secret 缺一即失败，绝不发未签名包）
@@ -219,8 +223,14 @@ OPDS 网络与解析逻辑集中在 `data/Opds.kt`，支持用户配置的 HTTP/
   5. `apksigner verify --print-certs` 校验签名，签名缺失或换了 key 直接失败
   6. 按 `version.properties` 的 `name` 重命名资产（`BETA 2` → `FrogReader-BETA-2.apk`）并生成
      `SHA256SUMS.txt`，上传 artifact `FrogReader-release`
-  7. `gh release create|upload` 自动发布：标题 `Frog Reader <versionName>`，`alpha-*|beta-*` 标
+  7. `gh release create|upload` 自动发布：标题 `青蛙阅读 <versionName>`，`alpha-*|beta-*` 标
      `--prerelease`（`/releases/latest` 保持稳定版）
+
+注意：拆成多个 workflow 后，分支保护里的 required status check 名称从 `CI / Quick Check`
+变成 `Quick Check / Compile Debug Kotlin` 这类「workflow 名 / job 名」，仓库设置里要重选一次。
+
+注意：AGP 在这里只生成 debug 单测变体（release 开了 R8 优化，没有单测变体），
+所以 `test` 就是全部；不要写 `:app:testReleaseUnitTest`，那个任务不存在。
 
 debug 版需要时本地 `./gradlew :app:assembleDebug` 即可；CI 里 debug 只做 PR 验证，不上传 artifact。
 
@@ -305,7 +315,7 @@ comm -23 /tmp/old /tmp/new     # 少了哪些
 | `ui/components/*` | 分段控件、snackbar、翻页胶囊 |
 | `ui/settings/SettingsComponents.kt` | 设置行、开关行、选择行（含触感） |
 | `scripts/release-signing.sh` | keystore + GitHub secrets + 本地 env |
-| `.github/workflows/ci.yml` | 单测 → 签名 release 构建 + lint → 一个 artifact |
+| `.github/workflows/*.yml` | 单测 → 签名 release 构建 + lint → 一个 artifact（一触发一文件） |
 | `app/build.gradle.kts` 的 signingConfig 段 | 环境变量驱动的可选签名 |
 | `app/src/main/keepRules/rules.keep` | 序列化模型的 R8 保留 |
 
