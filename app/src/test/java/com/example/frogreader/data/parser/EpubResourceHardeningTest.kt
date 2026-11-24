@@ -2,7 +2,10 @@ package com.example.frogreader.data.parser
 
 import com.example.frogreader.data.model.BlockAlign
 import com.example.frogreader.data.model.ContentElement
+import com.example.frogreader.data.model.damagedChapterTarget
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
@@ -338,6 +341,56 @@ class EpubResourceHardeningTest {
                 )
             }.kind,
         )
+    }
+
+    @Test
+    fun `a chapter the archive cannot deliver is marked instead of failing the book`() {
+        val file = epub(
+            "damaged-chapter.epub",
+            listOf(
+                Doc("one.xhtml", html(body = "<p>One.</p>")),
+                Doc("two.xhtml", html(body = "<p>Two.</p>")),
+                Doc("three.xhtml", html(body = "<p>Three.</p>")),
+            ),
+        )
+        // The reported book had 97 entries whose local header signature was
+        // gone while the central directory still listed them.
+        wipeLocalHeader(file, "two.xhtml")
+
+        val content = EpubParser.parseContent(file, temp.newFolder("damaged-images"))
+
+        assertEquals(3, content.chapters.size)
+        assertEquals(
+            listOf("One.", "\u200b\n\u200b\n\u200b\n\u200b\n\u200b\n\u200b\n\u200b\n\u200b", "Three."),
+            content.chapters.map { chapter ->
+                chapter.elements.filterIsInstance<ContentElement.Paragraph>().first().text.text
+            },
+        )
+        assertNotNull(content.chapters[1].elements.single().damagedChapterTarget())
+        assertNull(content.chapters[0].elements.single().damagedChapterTarget())
+        assertNull(content.chapters[2].elements.single().damagedChapterTarget())
+    }
+
+    /** Zero the local file header signature of [entry], leaving the CD intact. */
+    private fun wipeLocalHeader(file: File, entry: String) {
+        val bytes = file.readBytes()
+        val signature = byteArrayOf(0x50, 0x4b, 0x03, 0x04)
+        var from = 0
+        while (from < bytes.size) {
+            val at = (from until bytes.size - 4).firstOrNull { index ->
+                (0..3).all { bytes[index + it] == signature[it] }
+            } ?: error("no local header for $entry")
+            val nameLength = (bytes[at + 26].toInt() and 0xff) or
+                ((bytes[at + 27].toInt() and 0xff) shl 8)
+            val name = String(bytes, at + 30, nameLength, Charsets.UTF_8)
+            if (name == entry) {
+                for (offset in 0..3) bytes[at + offset] = 0
+                file.writeBytes(bytes)
+                return
+            }
+            from = at + 4
+        }
+        error("no local header for $entry")
     }
 
     private class Doc(

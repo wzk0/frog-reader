@@ -681,7 +681,19 @@ class ReaderViewModel(
             )
             else -> element
         }
-        val items = ReaderChapterItems(content.chapters, coverItem, ::adjusted)
+        // Flat starts for the marker resolution below. This is the same
+        // arithmetic ReaderChapterItems performs; both must keep the cover slot.
+        val markerStarts = buildList(content.chapters.size) {
+            var start = if (coverItem == null) 0 else 1
+            content.chapters.forEach { chapter ->
+                add(start)
+                start += chapter.elements.size
+            }
+        }
+        val markedChapters = content.chapters.withDamagedChapterTargets(
+            damagedChapterTargets(content.chapters, markerStarts),
+        )
+        val items = ReaderChapterItems(markedChapters, coverItem, ::adjusted)
         val chapterStarts = items.chapterStarts
         items.prepareAt(initialFlatIndex)
 

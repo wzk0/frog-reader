@@ -47,6 +47,57 @@ const val LINK_TAG = "internalLink"
 const val EXTERNAL_LINK_TAG = "externalLink"
 
 /**
+ * Annotation tag marking the stand-in paragraph of a chapter whose source data
+ * could not be read. The value is the flat reading-order item a "continue"
+ * button jumps to, or [UNRESOLVED_DAMAGED_CHAPTER] before the reader resolves
+ * it (the parser cannot know flat indices, the cover shifts every one of them).
+ *
+ * A marker rather than a new [ContentElement] variant: nothing beyond the four
+ * broken chapters in one book needs it, and a paragraph already flows through
+ * pagination, the layout cache and the renderer.
+ */
+const val DAMAGED_CHAPTER_TAG = "frogreader:damagedChapter"
+
+/** Annotation value for a damaged chapter whose target is not known yet. */
+const val UNRESOLVED_DAMAGED_CHAPTER = -1
+
+/**
+ * Stand-in paragraph for a chapter whose bytes are unreadable, carrying
+ * [DAMAGED_CHAPTER_TAG] so the renderer draws a notice with a button instead.
+ *
+ * The text is deliberately several zero-width lines tall: pagination only ever
+ * measures this text, while the notice that replaces it is a few rows high.
+ * Reserving roughly a card's worth of page keeps the notice from being clipped
+ * or split in two, and it is invisible either way.
+ */
+fun damagedChapterPlaceholder(): ContentElement.Paragraph = ContentElement.Paragraph(
+    damagedChapterText(UNRESOLVED_DAMAGED_CHAPTER),
+)
+
+private const val DAMAGED_CHAPTER_RESERVED_LINES = 8
+
+private fun damagedChapterText(target: Int): AnnotatedString {
+    val text = List(DAMAGED_CHAPTER_RESERVED_LINES) { "\u200b" }.joinToString("\n")
+    return AnnotatedString.Builder(text)
+        .apply { addStringAnnotation(DAMAGED_CHAPTER_TAG, target.toString(), 0, text.length) }
+        .toAnnotatedString()
+}
+
+/** The target of a damaged chapter's button, or null for ordinary content. */
+fun ContentElement.damagedChapterTarget(): Int? {
+    val paragraph = this as? ContentElement.Paragraph ?: return null
+    val annotation = paragraph.text
+        .getStringAnnotations(DAMAGED_CHAPTER_TAG, 0, paragraph.text.length)
+        .firstOrNull() ?: return null
+    return annotation.item.toIntOrNull()
+}
+
+/** Point a placeholder at [target]; a no-op for any other element. */
+fun ContentElement.withDamagedChapterTarget(target: Int): ContentElement =
+    if (damagedChapterTarget() == null) this
+    else (this as ContentElement.Paragraph).copy(text = damagedChapterText(target))
+
+/**
  * Annotation tag marking an image that sits *inside* the text flow — most
  * often a decorative initial ("К" drawn as a picture at the start of a
  * chapter). The annotation value is the image's file path, and it covers a

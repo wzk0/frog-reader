@@ -73,10 +73,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.automirrored.rounded.Undo
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.WarningAmber
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.AlertDialog
@@ -89,6 +91,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -189,6 +193,7 @@ import com.example.frogreader.data.model.ParagraphStyle
 import com.example.frogreader.data.model.Quote
 import com.example.frogreader.data.model.QuoteColor
 import com.example.frogreader.data.model.ReaderChromeStyle
+import com.example.frogreader.data.model.damagedChapterTarget
 import com.example.frogreader.ui.reader.selection.BookAnchor
 import com.example.frogreader.ui.reader.selection.ReaderHighlights
 import com.example.frogreader.ui.reader.selection.QuoteHighlight
@@ -3356,6 +3361,68 @@ private fun BrightnessOverlay(
     }
 }
 
+/**
+ * Stands in for a chapter whose bytes the archive cannot deliver. The button
+ * jumps to the nearest readable chapter, so a book with a damaged range stays
+ * usable instead of refusing to open.
+ */
+@Composable
+private fun DamagedChapterNotice(
+    target: Int,
+    colors: ReaderColors,
+    settings: ReaderSettings,
+    onJump: (Int) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = ReaderMetrics.horizontalPadding(settings))
+            .clip(RoundedCornerShape(20.dp))
+            .background(colors.control)
+            .padding(horizontal = 20.dp, vertical = 18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                imageVector = Icons.Rounded.WarningAmber,
+                contentDescription = null,
+                tint = colors.accent,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = stringResource(R.string.reader_damaged_chapter_title),
+                color = colors.text,
+                style = MaterialTheme.typography.titleMedium,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            text = stringResource(R.string.reader_damaged_chapter_body),
+            color = colors.secondaryText,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        if (target >= 0) {
+            Spacer(Modifier.height(16.dp))
+            Button(
+                onClick = { onJump(target) },
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.accent,
+                    contentColor = colors.onAccent,
+                ),
+                shape = RoundedCornerShape(24.dp),
+            ) {
+                Text(stringResource(R.string.reader_damaged_chapter_jump))
+                Spacer(Modifier.width(8.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowForward,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
+    }
+}
+
 /** Renders one element (or a paginated fragment of it). */
 @Composable
 internal fun RenderPart(
@@ -3391,6 +3458,18 @@ internal fun RenderPart(
     /** Reading viewport for publisher vh image limits in scrolling mode. */
     viewportHeight: androidx.compose.ui.unit.Dp? = null,
 ) {
+    // A chapter the archive could not deliver has no text to lay out: its
+    // placeholder carries the flat index of the nearest readable chapter.
+    val damagedTarget = element.damagedChapterTarget()
+    if (damagedTarget != null) {
+        DamagedChapterNotice(
+            target = damagedTarget,
+            colors = colors,
+            settings = settings,
+            onJump = { target -> footnotes?.onNavigate(target) },
+        )
+        return
+    }
     val density = LocalDensity.current
     val viewportHeightPx = with(density) { viewportHeight?.roundToPx() }
     val columnWidthPx = with(density) { contentWidth.roundToPx() }

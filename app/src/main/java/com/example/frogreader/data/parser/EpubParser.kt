@@ -21,12 +21,14 @@ import com.example.frogreader.data.model.PublisherSourceDescriptor
 import com.example.frogreader.data.model.PublisherSpineItem
 import com.example.frogreader.data.model.PublisherViewport
 import com.example.frogreader.data.model.RenditionLayout
+import com.example.frogreader.data.model.damagedChapterPlaceholder
 import com.example.frogreader.data.model.slicePublisherBoxSpans
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.jsoup.parser.Parser
 import java.io.File
+import java.io.IOException
 import java.net.URLDecoder
 import java.util.Locale
 import java.util.zip.ZipEntry
@@ -487,13 +489,35 @@ object EpubParser {
 
                 val chapterDir = chapterPath.substringBeforeLast('/', "")
 
-                val doc = parseChapterDocument(
-                    zip,
-                    entry,
-                    budget,
-                    limits,
-                    required = linear,
-                ) ?: continue
+                val doc = try {
+                    parseChapterDocument(
+                        zip,
+                        entry,
+                        budget,
+                        limits,
+                        required = linear,
+                    )
+                } catch (error: ResourceLimitException) {
+                    // A limit is a decision, not damage: keep failing the book.
+                    throw error
+                } catch (error: IOException) {
+                    // Bytes the archive cannot deliver — a bad local header or a
+                    // truncated block — must not make the whole publication
+                    // unopenable. Keep the chapter with a marked placeholder so
+                    // the reader can offer the nearest readable one instead.
+                    if (linear) {
+                        val tocEntry = titlesByPath[chapterPath]?.firstOrNull()
+                        val damagedIndex = chapterBuilders.size
+                        chapterBuilders += ChapterBuilder(
+                            title = tocEntry?.title,
+                            elements = listOf(damagedChapterPlaceholder()),
+                            depth = tocEntry?.depth ?: 0,
+                        )
+                        fileLocations.putIfAbsent(chapterPath, damagedIndex to 0)
+                        maybePublishPreview(1)
+                    }
+                    continue
+                } ?: continue
                 publisherDocuments.putIfAbsent(
                     chapterPath,
                     publisherDocumentInfo(
