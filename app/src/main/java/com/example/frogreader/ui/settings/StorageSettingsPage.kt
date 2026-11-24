@@ -56,7 +56,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -91,7 +91,6 @@ internal fun StorageSettingsPage(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val message by viewModel.message.collectAsStateWithLifecycle()
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var pendingDelete by remember { mutableStateOf<BookStorage?>(null) }
     // Rows that are collapsing right now; a book leaves storage once its row has
@@ -99,15 +98,19 @@ internal fun StorageSettingsPage(
     var leavingIds by remember { mutableStateOf(emptySet<String>()) }
     var confirmClear by rememberSaveable { mutableStateOf(false) }
 
-    LaunchedEffect(message) {
+    // The library screen's snackbar pattern: LocalResources is configuration
+    // aware, where LocalContext.getString inside an effect is not
+    // (lint LocalContextGetResourceValueCall).
+    val resources = LocalResources.current
+    LaunchedEffect(message, resources) {
         val current = message ?: return@LaunchedEffect
         onMessage(
             when (current) {
                 is StorageViewModel.Message.Deleted ->
-                    context.getString(R.string.storage_deleted, current.title)
+                    resources.getString(R.string.storage_deleted, current.title)
                 is StorageViewModel.Message.Cleared ->
-                    context.getString(R.string.storage_cleared, formatBytes(current.bytes))
-                is StorageViewModel.Message.Failed -> context.getString(R.string.storage_failed)
+                    resources.getString(R.string.storage_cleared, formatBytes(current.bytes))
+                is StorageViewModel.Message.Failed -> resources.getString(R.string.storage_failed)
             },
         )
         viewModel.consumeMessage()
