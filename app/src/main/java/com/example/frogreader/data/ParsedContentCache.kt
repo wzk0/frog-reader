@@ -357,8 +357,14 @@ internal class ParsedContentCache(
     }
 
     companion object {
-        const val MAX_ENTRY_BYTES = 8L * 1024 * 1024
-        const val MAX_EXPANDED_BYTES = 64L * 1024 * 1024
+        // A Chinese web novel serializes to more than 8 MiB of gzip and more
+        // than 64 MiB of JSON (凡人修仙传: 102,517 elements, 8.4 MiB / 70 MiB), so
+        // the old pair rejected exactly the books that most need the cache:
+        // decoding the snapshot takes under a second where reparsing takes
+        // several. Both stay bounded; a book past these limits is shown as
+        // memory-only rather than being kept at any price.
+        const val MAX_ENTRY_BYTES = 16L * 1024 * 1024
+        const val MAX_EXPANDED_BYTES = 96L * 1024 * 1024
         // Bump for any parser/model behavior change that invalidates rendered content.
         private const val FORMAT_VERSION = 1
         private const val MAGIC = 0x46524350 // FRCP

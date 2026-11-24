@@ -5,6 +5,7 @@ import com.example.frogreader.ui.components.SpaceBeforeHeading
 import com.example.frogreader.ui.components.SpaceAfterHeading
 import com.example.frogreader.ui.components.cardSurface
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import com.example.frogreader.ui.components.FrogSnackbarHost
 import com.example.frogreader.ui.theme.floatingSurface
@@ -72,6 +73,7 @@ import androidx.compose.material3.toShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.key
@@ -266,9 +268,21 @@ fun LibraryScreen(
     val pop = remember { ShelfPopState() }
     val selection = remember { LibrarySelection() }
     var preparseBookId by rememberSaveable { mutableStateOf<String?>(null) }
+    // A book that is already pre-parsed asks before doing the work again: the
+    // snapshot is on disk, so a second run only costs time and replaces it.
+    // Started from the click rather than a LaunchedEffect keyed on the request:
+    // clearing such a key restarts the effect and cancels the check itself.
+    var preparseConfirm by remember { mutableStateOf<Book?>(null) }
+    val preparseScope = rememberCoroutineScope()
     val startPreparse: (Book) -> Unit = { book ->
-        viewModel.preparseBook(book)
-        preparseBookId = book.id
+        preparseScope.launch {
+            if (viewModel.hasPreparsedContent(book)) {
+                preparseConfirm = book
+            } else {
+                viewModel.preparseBook(book)
+                preparseBookId = book.id
+            }
+        }
     }
     var menuRequest by remember { mutableStateOf<MenuRequest?>(null) }
     var addToShelfFor by remember { mutableStateOf<AddToShelfRequest?>(null) }
@@ -1035,6 +1049,18 @@ fun LibraryScreen(
                 }
             }
         }
+    }
+
+    preparseConfirm?.let { book ->
+        PreparseAgainDialog(
+            title = book.title,
+            onDismiss = { preparseConfirm = null },
+            onConfirm = {
+                preparseConfirm = null
+                viewModel.preparseBook(book)
+                preparseBookId = book.id
+            },
+        )
     }
 
     preparseBookId?.let { id ->

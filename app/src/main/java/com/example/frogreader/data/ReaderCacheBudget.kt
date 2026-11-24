@@ -1,5 +1,6 @@
 package com.example.frogreader.data
 
+import com.example.frogreader.data.model.CacheStorage
 import java.io.Closeable
 import java.io.File
 import java.io.IOException
@@ -30,9 +31,12 @@ internal class ReaderCacheBudget(
     private val clock: () -> Long = System::currentTimeMillis,
 ) {
     data class Limits(
-        val totalBytes: Long = 128L * 1024 * 1024,
-        val contentBytes: Long = 64L * 1024 * 1024,
-        val contentEntryBytes: Long = 8L * 1024 * 1024,
+        // Sized for one large book rather than a shelf of small ones: the
+        // per-book snapshot cap is 16 MiB, and the parsed quota has to leave
+        // room for at least two of them to survive eviction.
+        val totalBytes: Long = 256L * 1024 * 1024,
+        val contentBytes: Long = 128L * 1024 * 1024,
+        val contentEntryBytes: Long = 16L * 1024 * 1024,
     ) {
         init {
             require(totalBytes >= 0 && contentBytes >= 0 && contentEntryBytes >= 0)
@@ -182,6 +186,54 @@ internal class ReaderCacheBudget(
             entry?.remeasure()?.paths.isNullOrEmpty()
         }
     }
+
+    /**
+     * Everything the storage screen can bring back from the books.
+     *
+     * These roots hold extracted images, parsed snapshots and page layouts; a
+     * book's own file, its cover and user fonts live outside them. Sizes are
+     * measured, not taken from the usage markers, so an interrupted write or an
+     * older version cannot misreport them.
+     */
+    fun cacheSizes(): CacheStorage = synchronized(maintenanceLock) {
+        CacheStorage(
+            imagesBytes = measure(File(filesDir, "images")).bytes,
+            paginationBytes = measure(File(filesDir, "pagination")).bytes,
+            parsedBytes = measure(File(filesDir, "reader-content")).bytes,
+        )
+    }
+
+    /**
+     * Drops every regenerable cache and reports the bytes freed.
+     *
+     * Backs the explicit "clear caches" action, so unlike [trim] it does not
+     * spare a pinned book: whatever it removes is rebuilt on the next open, and
+     * a reader that loses those files behind its back is the documented cost of
+     * the user asking for them to go.
+     */
+    fun clearAll(): Long = synchronized(maintenanceLock) {
+        val roots = cacheRoots()
+        val before = roots.fold(0L) { total, root -> total.plusCapped(measure(root).bytes) }
+        roots.forEach { root ->
+            children(root).forEach { child ->
+                if (root == usageDir) {
+                    runCatching { Files.deleteIfExists(child.toPath()) }
+                } else {
+                    deleteTree(child)
+                }
+            }
+        }
+        val after = roots.fold(0L) { total, root -> total.plusCapped(measure(root).bytes) }
+        (before - after).coerceAtLeast(0L)
+    }
+
+    private fun cacheRoots(): List<File> = listOf(
+        File(filesDir, "images"),
+        File(filesDir, "reader-content"),
+        File(filesDir, "pagination"),
+        trashDir,
+        usageDir,
+    )
 
     private fun isPinned(bookId: String): Boolean = synchronized(pinLock) { (pins[bookId] ?: 0) > 0 }
 

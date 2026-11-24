@@ -45,6 +45,6 @@ private fun BeigeSettingsPreview() = FrogReaderTheme(AppTheme.SEPIA) {
         settings = AppSettings(theme = AppTheme.SEPIA, followSystemTheme = false),
         backupFrequency = BackupFrequency.OFF, lastBackupAt = null,
         onBack = {}, onOpenTheme = {}, onOpenReading = {}, onOpenPrivacy = {},
-        onOpenBackup = {}, onOpenAbout = {},
+        onOpenBackup = {}, onOpenStorage = {}, onOpenAbout = {},
     )
 }

@@ -75,3 +75,39 @@ internal fun BookPreparseDialog(title: String, state: BookPreparseState, onDismi
         },
     )
 }
+
+/**
+ * Asks before pre-parsing a book a second time.
+ *
+ * The first run is silent because it is the only way to get the cache; a later
+ * one replaces a snapshot that is already complete, so it has to be a choice.
+ */
+@Composable
+internal fun PreparseAgainDialog(title: String, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = MaterialTheme.colorScheme.floatingSurface,
+        tonalElevation = 0.dp,
+        title = { Text(stringResource(R.string.library_preparse_again_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(title, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(
+                    text = stringResource(R.string.library_preparse_again_message),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.library_preparse_again_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.library_preparse_again_cancel))
+            }
+        },
+    )
+}

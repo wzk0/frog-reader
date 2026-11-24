@@ -8,6 +8,8 @@ import android.graphics.BitmapFactory
 import android.provider.DocumentsContract
 import android.provider.OpenableColumns
 import com.example.frogreader.data.model.Book
+import com.example.frogreader.data.model.BookStorage
+import com.example.frogreader.data.model.CacheStorage
 import com.example.frogreader.data.model.ReadingQueueEntry
 import com.example.frogreader.data.model.ReadingLogEntry
 import com.example.frogreader.data.model.ReadingLogDate
@@ -192,6 +194,51 @@ open class BookRepository(private val context: Context? = null) {
     /** A live reader must keep the images/fonts behind its immutable model. */
     fun retainReaderResources(bookId: String): Closeable = readerCacheBudget.pin(bookId).also {
         bookkeeping.launch { readerCacheBudget.touch(bookId) }
+    }
+
+    /** Source-file sizes for the storage screen; a data-only record reports 0. */
+    suspend fun bookStorage(): List<BookStorage> = withContext(Dispatchers.IO) {
+        _books.value.map { book ->
+            BookStorage(
+                id = book.id,
+                title = book.title,
+                author = book.author,
+                format = book.format,
+                bytes = book.fileName
+                    ?.let { File(booksDir, it) }
+                    ?.takeIf { it.isFile }
+                    ?.length()
+                    ?: 0L,
+            )
+        }
+    }
+
+    /** Bytes of extracted images, page layouts and parsed snapshots. */
+    suspend fun readerCacheSizes(): CacheStorage =
+        withContext(Dispatchers.IO) { readerCacheBudget.cacheSizes() }
+
+    /**
+     * True when a complete parsed snapshot for this book is already on disk.
+     *
+     * The pre-parse screen asks first when this holds: the work was already paid
+     * for once, and redoing it both wastes the user's time and replaces a good
+     * snapshot with an identical one.
+     */
+    suspend fun hasPreparsedContent(book: Book): Boolean = withContext(Dispatchers.IO) {
+        val name = book.fileName ?: return@withContext false
+        val source = File(booksDir, name)
+        source.isFile && parsedContentCache.hasCompleteSnapshot(book.id, source)
+    }
+
+    /**
+     * Drops every regenerable cache and reports the bytes freed.
+     *
+     * The warm parsed book in memory goes with it: keeping a snapshot alive that
+     * no longer has images on disk would be a lie about what the next open does.
+     */
+    suspend fun clearReaderCaches(): Long = withContext(Dispatchers.IO) {
+        releaseContentCache()
+        readerCacheBudget.clearAll()
     }
 
     internal fun trimReaderCaches() {

@@ -67,6 +67,10 @@ class LibraryViewModel(
     private val _preparse = MutableStateFlow<Map<Pair<String, String>, BookPreparseState>>(emptyMap())
     internal val preparse = _preparse.asStateFlow()
 
+    /** Whether the pre-parse for [book] is already on disk, so asking again is worth it. */
+    internal suspend fun hasPreparsedContent(book: Book): Boolean =
+        repository.hasPreparsedContent(book)
+
     internal fun preparseBook(book: Book) {
         val fileName = book.fileName ?: return
         val key = book.id to fileName

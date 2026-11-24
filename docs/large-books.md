@@ -74,8 +74,8 @@ missing-resource failures remain retryable. A dedicated background-priority
 writer yields CPU time to reading; LRU recency IO does not delay opening text.
 
 `ReaderCacheBudget` applies LRU limits across existing extracted images/fonts,
-pagination and parsed content: 128 MiB combined, 64 MiB parsed content, 8 MiB
-compressed snapshots per book. Expanded snapshot streams are capped at 64 MiB;
+pagination and parsed content: 256 MiB combined, 128 MiB parsed content, 16 MiB
+compressed snapshots per book. Expanded snapshot streams are capped at 96 MiB;
 pagination files at 16 MiB. Recent-book markers survive restarts. Originals,
 covers, custom font imports, reading progress, quotes and backups are outside
 these roots. The backup format is unchanged.

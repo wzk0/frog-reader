@@ -33,7 +33,7 @@ private fun LightSettingsPreview() {
             backupFrequency = BackupFrequency.OFF,
             lastBackupAt = null,
             onBack = {}, onOpenTheme = {}, onOpenReading = {},
-            onOpenPrivacy = {}, onOpenBackup = {}, onOpenAbout = {},
+            onOpenPrivacy = {}, onOpenBackup = {}, onOpenStorage = {}, onOpenAbout = {},
         )
     }
 }

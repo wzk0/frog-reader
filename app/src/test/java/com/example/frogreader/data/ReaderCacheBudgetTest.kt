@@ -45,6 +45,39 @@ class ReaderCacheBudgetTest {
     }
 
     @Test
+    fun `storage sizes split the caches and clearing frees them`() {
+        put("images/one/source/image.jpg", 40)
+        put("pagination/one.json", 25)
+        put("reader-content/one/content.bin", 60)
+        // Not a cache: originals and user fonts must survive a cache wipe.
+        val book = put("books/one.epub", 90)
+        val budget = budget(total = 1_000)
+
+        val sizes = budget.cacheSizes()
+
+        assertEquals(40L, sizes.imagesBytes)
+        assertEquals(25L, sizes.paginationBytes)
+        assertEquals(60L, sizes.parsedBytes)
+        assertEquals(125L, sizes.totalBytes)
+
+        assertEquals(125L, budget.clearAll())
+        assertEquals(0L, budget.cacheSizes().totalBytes)
+        assertTrue(book.exists())
+    }
+
+    @Test
+    fun `clearing a cache does not spare a pinned book`() {
+        val image = put("images/pinned/source/image.jpg", 30)
+        val budget = budget(total = 1_000)
+        val pin = budget.pin("pinned")
+
+        budget.clearAll()
+
+        assertFalse(image.exists())
+        pin.close()
+    }
+
+    @Test
     fun `two independent pins protect active resources until both are released`() {
         val image = put("images/active/source/image.jpg", 40)
         val budget = budget(total = 10)

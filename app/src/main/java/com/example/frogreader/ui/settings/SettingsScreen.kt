@@ -24,6 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.CloudUpload
+import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Fingerprint
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Palette
@@ -63,6 +64,7 @@ private enum class SettingsDestination {
     OPDS,
     PRIVACY,
     BACKUP,
+    STORAGE,
 }
 
 @Composable
@@ -70,6 +72,7 @@ fun SettingsScreen(
     onBack: () -> Unit,
     viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory),
     backupViewModel: BackupViewModel = viewModel(factory = BackupViewModel.Factory),
+    storageViewModel: StorageViewModel = viewModel(factory = StorageViewModel.Factory),
 ) {
     val settings = viewModel.appSettings.collectAsStateWithLifecycle()
     val backupFrequency = backupViewModel.frequency.collectAsStateWithLifecycle()
@@ -93,6 +96,7 @@ fun SettingsScreen(
                     onOpenOpds = { navController.navigate(SettingsDestination.OPDS.name) { launchSingleTop = true } },
                     onOpenPrivacy = { navController.navigate(SettingsDestination.PRIVACY.name) { launchSingleTop = true } },
                     onOpenBackup = { navController.navigate(SettingsDestination.BACKUP.name) { launchSingleTop = true } },
+                    onOpenStorage = { navController.navigate(SettingsDestination.STORAGE.name) { launchSingleTop = true } },
                     onOpenAbout = { showAbout = true },
                 )
             }
@@ -137,6 +141,16 @@ fun SettingsScreen(
                     onBack = { navController.popBackStack() },
                 )
             }
+
+            composable(SettingsDestination.STORAGE.name) {
+                StorageSettingsPage(
+                    onBack = { navController.popBackStack() },
+                    onMessage = { message ->
+                        scope.launch { snackbarHostState.showSnackbar(message) }
+                    },
+                    viewModel = storageViewModel,
+                )
+            }
         }
 
         FrogSnackbarHost(
@@ -169,6 +183,7 @@ internal fun SettingsEntryPage(
     onOpenReading: () -> Unit,
     onOpenPrivacy: () -> Unit,
     onOpenBackup: () -> Unit,
+    onOpenStorage: () -> Unit,
     onOpenAbout: () -> Unit,
     onOpenOpds: () -> Unit = {},
 ) {
@@ -227,11 +242,18 @@ internal fun SettingsEntryPage(
                 onClick = onOpenPrivacy,
             )
             SettingsNavigationRow(
-                modifier = Modifier.connectedCard(scheme, connectedCardShape(first = false)),
+                modifier = Modifier.connectedCard(scheme, connectedCardShape(first = false, last = false)),
                 icon = Icons.Rounded.CloudUpload,
                 title = stringResource(R.string.settings_backup_title),
                 subtitle = backupSummary(lastBackupAt, backupFrequency),
                 onClick = onOpenBackup,
+            )
+            SettingsNavigationRow(
+                modifier = Modifier.connectedCard(scheme, connectedCardShape(first = false)),
+                icon = Icons.Rounded.Storage,
+                title = stringResource(R.string.settings_storage_title),
+                subtitle = stringResource(R.string.settings_storage_summary),
+                onClick = onOpenStorage,
             )
         }
 
